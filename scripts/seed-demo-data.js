@@ -117,8 +117,8 @@ async function createDemoDataForUser(user) {
 async function main() {
   const ownerEmail = process.env.SEED_OWNER_EMAIL || "owner@example.local";
   const ownerPassword = process.env.SEED_OWNER_PASSWORD || `Owner-${Math.random().toString(36).slice(2, 10)}`;
-  const demoEmail = process.env.SEED_DEMO_EMAIL || "demo@example.local";
-  const demoPassword = process.env.SEED_DEMO_PASSWORD || `Demo-${Math.random().toString(36).slice(2, 10)}`;
+  const demoEmail = process.env.SEED_DEMO_EMAIL || "demo@psyreport.es";
+  const demoPassword = process.env.SEED_DEMO_PASSWORD || "demo1234";
 
   const owner = await upsertUser({
     email: ownerEmail,

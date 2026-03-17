@@ -10,12 +10,23 @@ import { forgotPassword, loginUser } from "@/app/actions/auth";
 
 export default function AuthPage() {
   const router = useRouter();
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "";
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "";
+  const hasDemoAccess = Boolean(demoEmail && demoPassword);
   const [isForgot, setIsForgot] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState({ text: "", isError: false, devLink: "" });
+
+  const fillDemoAccess = () => {
+    if (!hasDemoAccess) return;
+    setIsForgot(false);
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setMsg({ text: "", isError: false, devLink: "" });
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,6 +250,29 @@ export default function AuthPage() {
           <div className="mt-8 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
             El alta de nuevas cuentas esta desactivada. Si necesitas acceso, solicita la creacion de usuario a la administracion del centro.
           </div>
+
+          {hasDemoAccess && (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-extrabold">Acceso demo disponible</p>
+                  <p className="mt-1 text-emerald-800">
+                    Puedes entrar con el usuario de prueba configurado para demostraciones.
+                  </p>
+                  <p className="mt-3 font-mono text-xs break-all">
+                    {demoEmail}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fillDemoAccess}
+                  className="rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+                >
+                  Usar acceso demo
+                </button>
+              </div>
+            </div>
+          )}
 
           <p className="mt-6 text-center text-xs text-slate-400">
             Al acceder, aceptas nuestra{" "}

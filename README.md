@@ -59,6 +59,8 @@ DATABASE_URL=...
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ENABLE_SELF_REGISTRATION=false
+NEXT_PUBLIC_DEMO_EMAIL=demo@psyreport.es
+NEXT_PUBLIC_DEMO_PASSWORD=demo1234
 ```
 
 3. Sincroniza Prisma:
@@ -73,6 +75,8 @@ npx prisma generate
 ```bash
 npm run seed:demo
 ```
+
+Si defines `NEXT_PUBLIC_DEMO_EMAIL` y `NEXT_PUBLIC_DEMO_PASSWORD`, la pantalla de login mostrara un acceso demo rellenable con un clic. Las cuentas reales deben seguir siendo creadas por administracion o por un proceso interno controlado.
 
 5. Arranca la app:
 
