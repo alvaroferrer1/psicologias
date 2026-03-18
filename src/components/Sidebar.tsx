@@ -90,13 +90,13 @@ export default function Sidebar({ user }: { user?: SidebarUser | null }) {
       >
         <div className={cn("relative flex h-[72px] items-center border-b border-secondary-border shrink-0", isCollapsed ? "justify-center px-0" : "justify-between px-4")}>
           <Link href="/dashboard" className={cn("flex items-center gap-3 overflow-hidden transition-all", isCollapsed ? "w-full justify-center" : "")} onClick={() => setIsOpen(false)}>
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-primary shadow-md shrink-0">
-              <Image src="/emotiva-logo.png" alt="Emotiva" width={36} height={36} className="object-contain" priority />
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shrink-0">
+              <Image src="/emotiva-dashboard-logo.jpeg" alt="Emotiva" width={44} height={44} className="h-full w-full object-cover" priority />
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <p className="whitespace-nowrap text-[15px] font-extrabold leading-tight tracking-tight text-secondary-text">Emotiva System</p>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Centro Psicologico</p>
+                <p className="whitespace-nowrap text-[15px] font-extrabold leading-tight tracking-tight text-secondary-text">Centro Emotiva</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">PsyReport Clinico</p>
               </div>
             )}
           </Link>

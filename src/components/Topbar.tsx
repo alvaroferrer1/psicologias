@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import TopbarSearch from "@/components/TopbarSearch";
@@ -24,14 +25,6 @@ export default function Topbar({ user }: { user?: TopbarUser | null }) {
     return "Dashboard";
   };
 
-  const userInitials =
-    user?.name
-      ?.split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || "U";
-
   return (
     <div className="sticky top-0 z-30 flex h-[73px] items-center justify-between border-b border-secondary-border bg-white px-4 pb-[1px] shadow-nav md:px-6">
       <div className="flex min-w-0 items-center gap-3">
@@ -50,8 +43,15 @@ export default function Topbar({ user }: { user?: TopbarUser | null }) {
 
       <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
         <TopbarSearch />
-        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border-[1.5px] border-primary-border bg-gradient-to-br from-primary-muted to-primary-light text-sm font-bold text-primary shadow-sm md:hidden">
-          {userInitials}
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:hidden">
+          <Image
+            src="/emotiva-dashboard-logo.jpeg"
+            alt={`Acceso de ${user?.name || "usuario"}`}
+            width={40}
+            height={40}
+            className="h-full w-full object-cover"
+            priority
+          />
         </div>
       </div>
     </div>

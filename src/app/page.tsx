@@ -62,19 +62,20 @@ export default function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#edf9f6] via-[#f8fffd] to-[#e5f6f2] p-4">
       <div className="flex w-full max-w-[1020px] flex-col overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-2xl md:flex-row">
-        <div className="relative hidden w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-[#0d968b] via-[#11a59a] to-[#0a7a70] p-10 text-white md:flex md:w-[46%]">
-          <div className="absolute right-[-60px] top-[-60px] h-[280px] w-[280px] rounded-full bg-[#0b6f67] opacity-35 blur-3xl" />
-          <div className="absolute bottom-[-80px] left-[-40px] h-[360px] w-[360px] rounded-full bg-[#0a5f58] opacity-25 blur-3xl" />
+        <div className="relative hidden w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-[#5d86cf] via-[#6b93d8] to-[#4a76be] p-10 text-white md:flex md:w-[46%]">
+          <div className="absolute right-[-60px] top-[-60px] h-[280px] w-[280px] rounded-full bg-[#3b63a8] opacity-35 blur-3xl" />
+          <div className="absolute bottom-[-80px] left-[-40px] h-[360px] w-[360px] rounded-full bg-[#274e8f] opacity-25 blur-3xl" />
 
           <div className="relative z-10">
-            <div className="mb-8 flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-white/25 bg-white/12 shadow-lg backdrop-blur-sm">
-                <Image src="/emotiva-logo.png" alt="PsyReport" width={52} height={52} className="object-contain" priority />
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-white/70">Plataforma clinica</p>
-                <h1 className="text-2xl font-black leading-tight tracking-tight">PsyReport</h1>
-              </div>
+            <div className="mb-8 overflow-hidden rounded-[28px] border border-white/20 bg-white/10 p-4 shadow-xl backdrop-blur-sm">
+              <Image
+                src="/emotiva-auth-logo.jpeg"
+                alt="Centro Psicologico Emotiva"
+                width={560}
+                height={560}
+                className="h-auto w-full rounded-[20px] object-cover"
+                priority
+              />
             </div>
 
             <div className="space-y-5">
@@ -119,20 +120,26 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <div className="relative z-10 text-xs font-medium text-white/50">
-            (c) 2026 PsyReport - Uso interno del centro
+          <div className="relative z-10 text-xs font-medium text-white/60">
+            (c) 2026 Centro Psicologico Emotiva - Uso interno del centro
           </div>
         </div>
 
         <div className="w-full p-8 sm:p-12 md:w-[54%]">
-          <div className="mb-8 flex items-center gap-3 md:hidden">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-primary">
-              <Image src="/emotiva-logo.png" alt="PsyReport" width={36} height={36} className="object-contain" priority />
+          <div className="mb-8 md:hidden">
+            <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50 p-3 shadow-sm">
+              <Image
+                src="/emotiva-auth-logo.jpeg"
+                alt="Centro Psicologico Emotiva"
+                width={560}
+                height={560}
+                className="h-auto w-full rounded-[18px] object-cover"
+                priority
+              />
             </div>
-            <div>
-              <h1 className="text-xl font-extrabold text-secondary-text">PsyReport</h1>
-              <p className="text-xs text-slate-500">Acceso profesional privado</p>
-            </div>
+            <p className="mt-3 text-center text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+              Acceso profesional privado
+            </p>
           </div>
 
           <div className="mb-8">
