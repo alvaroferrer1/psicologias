@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, FilePlus2, FolderOpen, History, Home, LogOut, Menu, Settings, Trash2, Users, Video, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { CalendarDays, FilePlus2, FolderOpen, History, Home, LogOut, Menu, Settings, Trash2, Users, UserRoundPlus, Video, X } from "lucide-react";
 import { logoutUser } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
+import { getRoleLabel, isAdminRole } from "@/lib/permissions";
 
 type SidebarUser = {
   name?: string | null;
@@ -16,9 +17,9 @@ type SidebarUser = {
 
 export default function Sidebar({ user }: { user?: SidebarUser | null }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const handleToggle = () => setIsOpen((prev) => !prev);
@@ -51,10 +52,14 @@ export default function Sidebar({ user }: { user?: SidebarUser | null }) {
 
   const extraLinks = [{ name: "Videoconsulta", href: "/dashboard/video", icon: Video }];
 
-  const adminLinks = [
-    { name: "Auditoria", href: "/dashboard/audit", icon: History },
+  const clinicLinks = [
     { name: "Configuracion", href: "/dashboard/settings", icon: Settings },
     { name: "Papelera", href: "/dashboard/trash", icon: Trash2 },
+  ];
+
+  const adminLinks = [
+    { name: "Equipo", href: "/dashboard/team", icon: UserRoundPlus },
+    { name: "Auditoria", href: "/dashboard/audit", icon: History },
   ];
 
   const renderLink = (link: { name: string; href: string; icon: ComponentType<{ className?: string }> }) => {
@@ -130,7 +135,8 @@ export default function Sidebar({ user }: { user?: SidebarUser | null }) {
             {isCollapsed && <div className="mx-auto h-[1px] w-6 bg-slate-200" />}
           </div>
 
-          {adminLinks.map(renderLink)}
+          {clinicLinks.map(renderLink)}
+          {isAdminRole(user?.role) && adminLinks.map(renderLink)}
         </div>
 
         <div className={cn("shrink-0 border-t border-secondary-border p-3", isCollapsed ? "px-2" : "")}>
@@ -141,22 +147,27 @@ export default function Sidebar({ user }: { user?: SidebarUser | null }) {
             {!isCollapsed && (
               <div className="min-w-0 flex-1 text-left">
                 <p className="truncate text-sm font-bold text-secondary-text">{user?.name || "Usuario"}</p>
-                <p className="truncate text-xs font-semibold tracking-tight text-primary">{user?.role === "ADMIN" ? "Administrador(a)" : "Especialista"}</p>
+                <p className="truncate text-xs font-semibold tracking-tight text-primary">{getRoleLabel(user?.role)}</p>
               </div>
             )}
           </Link>
 
           <button
             onClick={async () => {
-              await logoutUser();
-              router.replace("/");
-              router.refresh();
+              if (isLoggingOut) return;
+              setIsLoggingOut(true);
+              try {
+                await logoutUser();
+              } finally {
+                window.location.assign("/");
+              }
             }}
-            className={cn("group mt-1 flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500", isCollapsed ? "p-3" : "")}
+            disabled={isLoggingOut}
+            className={cn("group mt-1 flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-60", isCollapsed ? "p-3" : "")}
             type="button"
           >
             <LogOut className="h-4 w-4 transition-all" />
-            {!isCollapsed && "Cerrar sesion"}
+            {!isCollapsed && (isLoggingOut ? "Cerrando..." : "Cerrar sesion")}
           </button>
         </div>
       </aside>

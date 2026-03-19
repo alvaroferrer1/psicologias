@@ -3,10 +3,20 @@ import { Prisma } from "@prisma/client";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { canEditRole, isAdminRole } from "@/lib/permissions";
 
 const SESSION_COOKIE = "psyreport_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 const SESSION_REFRESH_THRESHOLD = 60 * 60 * 24;
+
+function shouldUseSecureCookies(hostHeader?: string | null) {
+  if (process.env.NODE_ENV !== "production") {
+    return false;
+  }
+
+  const host = (hostHeader || "").toLowerCase();
+  return !(host.includes("127.0.0.1") || host.includes("localhost"));
+}
 
 export async function getCurrentSessionToken() {
   const cookieStore = await cookies();
@@ -18,6 +28,7 @@ export async function createAppSession(userId: string) {
   const headerStore = await headers();
   const sessionToken = randomUUID();
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
+  const secure = shouldUseSecureCookies(headerStore.get("host"));
 
   await prisma.session.create({
     data: {
@@ -31,7 +42,7 @@ export async function createAppSession(userId: string) {
 
   cookieStore.set(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     maxAge: SESSION_MAX_AGE,
     path: "/",
@@ -67,6 +78,7 @@ export async function revokeAllUserSessions(userId: string, exceptSessionToken?:
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
+  const headerStore = await headers();
   const sessionToken = cookieStore.get(SESSION_COOKIE)?.value;
 
   if (!sessionToken) {
@@ -110,7 +122,7 @@ export async function getCurrentUser() {
   if (shouldRefresh) {
     cookieStore.set(SESSION_COOKIE, sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: shouldUseSecureCookies(headerStore.get("host")),
       sameSite: "lax",
       maxAge: SESSION_MAX_AGE,
       path: "/",
@@ -126,6 +138,22 @@ export async function requireCurrentUser() {
     redirect("/");
   }
 
+  return user;
+}
+
+export async function requireEditableUser() {
+  const user = await requireCurrentUser();
+  if (!canEditRole(user.role)) {
+    redirect("/dashboard");
+  }
+  return user;
+}
+
+export async function requireAdminUser() {
+  const user = await requireCurrentUser();
+  if (!isAdminRole(user.role)) {
+    redirect("/dashboard");
+  }
   return user;
 }
 

@@ -36,6 +36,9 @@ type DocumentItem = {
   title: string;
   documentType: string;
   url?: string | null;
+  fileName?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
   notes?: string | null;
   createdAt: string;
 };
@@ -73,6 +76,7 @@ export function PatientWorkspace({ patient, reports, appointments, notes, docume
   const [reportType, setReportType] = useState("");
   const [noteForm, setNoteForm] = useState({ title: "", content: "", sessionDate: "" });
   const [documentForm, setDocumentForm] = useState({ title: "", documentType: "Consentimiento", url: "", notes: "" });
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [consentForm, setConsentForm] = useState({ consentType: "Proteccion de datos", status: "firmado", signedAt: "", notes: "" });
 
   const filteredReports = useMemo(() => {
@@ -125,13 +129,33 @@ export function PatientWorkspace({ patient, reports, appointments, notes, docume
   const handleAddDocument = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     startTransition(async () => {
-      const res = await addPatientDocument({ patientId: patient.id, ...documentForm });
+      let uploadPayload: Record<string, string | number | undefined> = {};
+
+      if (documentFile) {
+        const payload = new FormData();
+        payload.append("file", documentFile);
+        payload.append("patientId", patient.id);
+        const uploadRes = await fetch("/api/uploads/patient-document", {
+          method: "POST",
+          body: payload,
+        });
+        const uploadJson = await uploadRes.json();
+        if (!uploadRes.ok) {
+          toast({ type: "error", title: uploadJson.error || "No se pudo subir el archivo." });
+          return;
+        }
+        uploadPayload = uploadJson;
+      }
+
+      const res = await addPatientDocument({ patientId: patient.id, ...documentForm, ...uploadPayload });
       if (!res.success) {
         toast({ type: "error", title: res.error || "No se pudo guardar el documento." });
         return;
       }
       setDocumentForm({ title: "", documentType: "Consentimiento", url: "", notes: "" });
+      setDocumentFile(null);
       toast({ type: "success", title: "Documento registrado." });
+      window.location.reload();
     });
   };
 
@@ -286,7 +310,8 @@ export function PatientWorkspace({ patient, reports, appointments, notes, docume
                 <option value="Justificante">Justificante</option>
                 <option value="Otro">Otro</option>
               </select>
-              <input value={documentForm.url} onChange={(event) => setDocumentForm((prev) => ({ ...prev, url: event.target.value }))} placeholder="URL o referencia interna (opcional)" className="inp w-full" />
+              <input value={documentForm.url} onChange={(event) => setDocumentForm((prev) => ({ ...prev, url: event.target.value }))} placeholder="URL externa opcional" className="inp w-full" />
+              <input type="file" className="inp w-full" onChange={(event) => setDocumentFile(event.target.files?.[0] || null)} />
               <textarea value={documentForm.notes} onChange={(event) => setDocumentForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder="Notas del documento" className="inp min-h-[90px] w-full resize-y" />
               <button type="submit" disabled={isPending} className="btn btn-primary">
                 <FolderHeart className="h-4 w-4" /> Registrar documento
@@ -308,9 +333,10 @@ export function PatientWorkspace({ patient, reports, appointments, notes, docume
                     </div>
                     {document.url && (
                       <a href={document.url} target="_blank" rel="noreferrer" className="mt-2 block text-sm font-semibold text-primary hover:underline">
-                        Abrir referencia
+                        Abrir documento
                       </a>
                     )}
+                    {document.fileName && <p className="mt-2 text-xs text-slate-400">{document.fileName}{document.sizeBytes ? ` · ${(document.sizeBytes / 1024).toFixed(1)} KB` : ""}</p>}
                     {document.notes && <p className="mt-2 text-sm text-slate-600">{document.notes}</p>}
                   </div>
                 ))

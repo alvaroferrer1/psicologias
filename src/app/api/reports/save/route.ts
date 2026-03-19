@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, logAudit } from "@/lib/auth";
+import { canEditRole } from "@/lib/permissions";
 
 export async function POST(req: Request) {
   try {
@@ -8,8 +9,11 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
+    if (!canEditRole(user.role)) {
+      return NextResponse.json({ error: "Tu rol es de solo lectura." }, { status: 403 });
+    }
 
-    const { reportId, patientId, title, body, type, status } = await req.json();
+    const { reportId, patientId, title, body, type, status, reportKind, patientCategory } = await req.json();
 
     if (!patientId || !title) {
       return NextResponse.json({ error: "Faltan datos obligatorios" }, { status: 400 });
@@ -48,7 +52,9 @@ export async function POST(req: Request) {
             userId: user.id,
             title,
             content: body || null,
-            type: type || "General",
+            type: type || "adulto",
+            reportKind: reportKind || "informe",
+            patientCategory: patientCategory || "adulto",
             patientId,
             status: status || "Borrador",
           },
@@ -58,7 +64,9 @@ export async function POST(req: Request) {
             userId: user.id,
             title,
             content: body || null,
-            type: type || "General",
+            type: type || "adulto",
+            reportKind: reportKind || "informe",
+            patientCategory: patientCategory || "adulto",
             patientId,
             status: status || "Borrador",
           },
@@ -87,7 +95,7 @@ export async function POST(req: Request) {
       action: reportId ? "report.update" : "report.create",
       entityType: "report",
       entityId: report.id,
-      metadata: { patientId, status: report.status, type: report.type },
+      metadata: { patientId, status: report.status, type: report.type, reportKind: report.reportKind, patientCategory: report.patientCategory },
     });
 
     return NextResponse.json({ success: true, report });

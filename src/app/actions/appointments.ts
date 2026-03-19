@@ -2,11 +2,11 @@
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
-import { logAudit, requireCurrentUser } from "@/lib/auth"
+import { logAudit, requireCurrentUser, requireEditableUser } from "@/lib/auth"
 
 export async function getAppointments() {
   try {
-    const user = await requireCurrentUser()
+    const user = await requireEditableUser()
     const appointments = await prisma.appointment.findMany({
       where: {
         deletedAt: null,
@@ -27,7 +27,7 @@ export async function getAppointments() {
 
 export async function createAppointment(data: { patientId: string, title: string, type: string, date: Date }) {
   try {
-    const user = await requireCurrentUser()
+    const user = await requireEditableUser()
     const patient = await prisma.patient.findFirst({
       where: {
         id: data.patientId,

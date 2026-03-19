@@ -108,7 +108,7 @@ export default function PrivacyPolicy() {
                     <li>Nombre y apellidos del paciente y/o tutor</li>
                     <li>DNI/NIE, fecha de nacimiento</li>
                     <li>Email y teléfono de contacto</li>
-                    <li>Datos del profesional (nº colegiado)</li>
+                    <li>Datos del profesional (DNI profesional)</li>
                   </ul>
                 </div>
               </div>

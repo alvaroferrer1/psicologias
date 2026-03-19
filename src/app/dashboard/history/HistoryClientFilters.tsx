@@ -1,78 +1,69 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
 type Props = {
   currentQ?: string;
-  currentType?: string;
+  currentCategory?: string;
+  currentKind?: string;
   currentStatus?: string;
 };
 
 export default function HistoryClientFilters({
   currentQ = "",
-  currentType = "",
+  currentCategory = "",
+  currentKind = "",
   currentStatus = "",
 }: Props) {
-  const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-
   const [query, setQuery] = useState(currentQ);
-  const [type, setType] = useState(currentType);
+  const [category, setCategory] = useState(currentCategory);
+  const [kind, setKind] = useState(currentKind);
   const [status, setStatus] = useState(currentStatus);
 
+  const buildUrl = useMemo(
+    () => (next: { q?: string; category?: string; kind?: string; status?: string }) => {
+      const params = new URLSearchParams();
+
+      if ((next.q || "").trim()) params.set("q", (next.q || "").trim());
+      if (next.category) params.set("category", next.category);
+      if (next.kind) params.set("kind", next.kind);
+      if (next.status) params.set("status", next.status);
+
+      const queryString = params.toString();
+      return queryString ? `${pathname}?${queryString}` : pathname;
+    },
+    [pathname]
+  );
+
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      startTransition(() => {
-        const params = new URLSearchParams(searchParams.toString());
+    const timeout = window.setTimeout(() => {
+      if (query === currentQ) return;
+      window.location.assign(buildUrl({ q: query, category, kind, status }));
+    }, 300);
 
-        if (query.trim()) {
-          params.set("q", query.trim());
-        } else {
-          params.delete("q");
-        }
+    return () => window.clearTimeout(timeout);
+  }, [buildUrl, category, currentQ, kind, query, status]);
 
-        if (type) {
-          params.set("type", type);
-        } else {
-          params.delete("type");
-        }
-
-        if (status) {
-          params.set("status", status);
-        } else {
-          params.delete("status");
-        }
-
-        const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-        router.replace(nextUrl, { scroll: false });
-      });
-    }, 250);
-
-    return () => clearTimeout(timeout);
-  }, [pathname, query, router, searchParams, status, type]);
+  const navigateNow = (next: { q?: string; category?: string; kind?: string; status?: string }) => {
+    window.location.assign(buildUrl(next));
+  };
 
   const resetFilters = () => {
     setQuery("");
-    setType("");
+    setCategory("");
+    setKind("");
     setStatus("");
-    router.replace(pathname, { scroll: false });
+    window.location.assign(pathname);
   };
-
-  const hasFilters = Boolean(query || type || status);
 
   return (
     <div className="card p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
         <div className="relative flex-1">
-          <Search
-            className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
-              isPending ? "text-primary animate-pulse" : "text-slate-400"
-            }`}
-          />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             value={query}
@@ -83,49 +74,64 @@ export default function HistoryClientFilters({
           />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row lg:w-auto">
-          <div className="relative min-w-[160px]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <div className="relative min-w-[180px]">
             <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <select
-              value={type}
-              onChange={(event) => setType(event.target.value)}
+              value={category}
+              onChange={(event) => {
+                const value = event.target.value;
+                setCategory(value);
+                navigateNow({ q: query, category: value, kind, status });
+              }}
               className="inp appearance-none pl-9"
-              aria-label="Filtrar por tipo"
+              aria-label="Filtrar por categoria de paciente"
             >
-              <option value="">Todos los tipos</option>
-              <option value="General">General</option>
-              <option value="TC">TC</option>
-              <option value="TL">TL</option>
-              <option value="TCC">TCC</option>
-              <option value="TF">TF</option>
-              <option value="TP">TP</option>
-              <option value="adulto">Adulto</option>
-              <option value="adolescente">Adolescente</option>
-              <option value="infantil">Infantil</option>
-              <option value="pareja">Pareja</option>
+              <option value="">Todos los pacientes</option>
+              <option value="infantil">Ninos</option>
+              <option value="adolescente">Adolescentes</option>
+              <option value="adulto">Adultos</option>
+              <option value="pareja">Parejas</option>
               <option value="familia">Familia</option>
-              <option value="escolar">Escolar</option>
             </select>
           </div>
 
           <select
+            value={kind}
+            onChange={(event) => {
+              const value = event.target.value;
+              setKind(value);
+              navigateNow({ q: query, category, kind: value, status });
+            }}
+            className="inp min-w-[180px]"
+            aria-label="Filtrar por tipo de documento"
+          >
+            <option value="">Todos los documentos</option>
+            <option value="historia_clinica">Historia clinica</option>
+            <option value="informe">Informe</option>
+            <option value="registro">Reporte</option>
+          </select>
+
+          <select
             value={status}
-            onChange={(event) => setStatus(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value;
+              setStatus(value);
+              navigateNow({ q: query, category, kind, status: value });
+            }}
             className="inp min-w-[170px]"
             aria-label="Filtrar por estado"
           >
             <option value="">Todos los estados</option>
             <option value="Borrador">Borrador</option>
-            <option value="En revisión">En revisión</option>
+            <option value="En revision">En revision</option>
             <option value="Completado">Completado</option>
             <option value="Finalizado">Finalizado</option>
           </select>
 
-          {hasFilters && (
-            <button type="button" onClick={resetFilters} className="btn btn-ghost">
-              <X className="h-4 w-4" /> Limpiar
-            </button>
-          )}
+          <button type="button" onClick={resetFilters} className="btn btn-ghost whitespace-nowrap">
+            <X className="h-4 w-4" /> Limpiar filtros
+          </button>
         </div>
       </div>
     </div>

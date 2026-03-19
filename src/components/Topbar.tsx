@@ -4,12 +4,20 @@ import Image from "next/image";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import TopbarSearch from "@/components/TopbarSearch";
+import { TopbarNotifications } from "@/components/TopbarNotifications";
 
 type TopbarUser = {
   name?: string | null;
 };
 
-export default function Topbar({ user }: { user?: TopbarUser | null }) {
+type NotificationItem = {
+  id: string;
+  title: string;
+  description: string;
+  href?: string;
+};
+
+export default function Topbar({ user, notifications = [] }: { user?: TopbarUser | null; notifications?: NotificationItem[] }) {
   const pathname = usePathname();
 
   const getPageTitle = () => {
@@ -43,6 +51,7 @@ export default function Topbar({ user }: { user?: TopbarUser | null }) {
 
       <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
         <TopbarSearch />
+        <TopbarNotifications items={notifications} />
         <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:hidden">
           <Image
             src="/emotiva-dashboard-logo.jpeg"

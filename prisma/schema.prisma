@@ -14,7 +14,12 @@ model User {
   name                String
   role                String               @default("USER")
   colegiado           String?
+  dni                 String?
   avatarUrl           String?
+  signatureDataUrl    String?
+  stampDataUrl        String?
+  failedLoginAttempts Int                  @default(0)
+  lockedUntil         DateTime?
   createdAt           DateTime             @default(now())
   sessions            Session[]
   patients            Patient[]
@@ -26,6 +31,7 @@ model User {
   patientNotes        PatientNote[]
   patientDocuments    PatientDocument[]
   consentRecords      ConsentRecord[]
+  sentInvitations     Invitation[]         @relation("InvitationSentBy")
 }
 
 model Session {
@@ -52,8 +58,18 @@ model Patient {
   description     String?
   email           String?
   phone           String?
+  dni             String?
+  birthDate       DateTime?
+  address         String?
+  patientType     String        @default("adulto")
+  status          String        @default("activo")
+  guardianName    String?
+  guardianDni     String?
+  guardianPhone   String?
+  guardianEmail   String?
+  clinicalAlerts  String?
   active          Boolean       @default(true)
-  color           String        @default("bg-emerald-500")
+  color           String        @default("bg-blue-500")
   deletedAt       DateTime?
   deletedByUserId String?
   createdAt       DateTime      @default(now())
@@ -74,6 +90,8 @@ model Report {
   user            User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
   title           String
   type            String        @default("General")
+  reportKind      String        @default("informe")
+  patientCategory String        @default("adulto")
   status          String        @default("Borrador")
   content         String?
   patientId       String
@@ -87,6 +105,7 @@ model Report {
   @@index([userId])
   @@index([patientId])
   @@index([deletedAt])
+  @@index([reportKind, patientCategory])
 }
 
 model Appointment {
@@ -185,11 +204,30 @@ model PatientDocument {
   title        String
   documentType String
   url          String?
+  storagePath  String?
+  fileName     String?
+  mimeType     String?
+  sizeBytes    Int?
   notes        String?
   createdAt    DateTime @default(now())
 
   @@index([patientId, createdAt])
   @@index([userId])
+}
+
+model Invitation {
+  id              String   @id @default(uuid())
+  email           String
+  role            String   @default("PSYCHOLOGIST")
+  token           String   @unique
+  invitedByUserId String?
+  invitedByUser   User?    @relation("InvitationSentBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([email, acceptedAt])
+  @@index([token])
 }
 
 model ConsentRecord {

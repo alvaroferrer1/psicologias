@@ -1,94 +1,38 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Edit3, FileText } from "lucide-react";
+import { ArrowLeft, Edit3 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/auth";
+import { AutoDownloadPdf } from "@/components/AutoDownloadPdf";
 import { ReportPdfButton } from "@/components/ReportPdfButton";
+import { parseStoredReportContent } from "@/lib/report-content";
+import {
+  EMOTIVA_LEGAL_NOTICE,
+  getPatientCategoryLabel,
+  getPdfDocumentHeading,
+  getReportKindLabel,
+  getReportSections,
+  type PatientCategory,
+  type ReportFieldDefinition,
+  type ReportKind,
+} from "@/lib/report-templates";
 
-type ReportSection = {
-  title: string;
-  items: Array<[string, string]>;
-};
+function normalizeCategory(value?: string | null): PatientCategory {
+  if (value === "infantil" || value === "adolescente" || value === "pareja" || value === "familia") return value;
+  return "adulto";
+}
 
-function buildSections(content: string | null): ReportSection[] {
-  if (!content) return [];
+function normalizeKind(value?: string | null): ReportKind {
+  if (value === "historia_clinica" || value === "registro") return value;
+  return "informe";
+}
 
-  try {
-    const parsed = JSON.parse(content) as Record<string, unknown>;
-    const sections: Array<{ title: string; items: Array<[string, unknown]> }> = [
-      {
-        title: "Profesional",
-        items: [
-          ["Nombre", parsed.prof_nombre],
-          ["Nº colegiado", parsed.prof_colegiado],
-          ["Especialidad", parsed.prof_especialidad],
-          ["Centro", parsed.prof_centro],
-          ["Fecha", parsed.prof_fecha],
-        ],
-      },
-      {
-        title: "Paciente",
-        items: [
-          ["Nombre", parsed.pac_nombre],
-          ["Fecha de nacimiento", parsed.pac_dob],
-          ["DNI / NIE", parsed.pac_dni],
-          ["Direccion", parsed.pac_direccion],
-        ],
-      },
-      {
-        title: "Consulta",
-        items: [
-          ["Motivo de consulta", parsed.consult_motivo],
-          ["Antecedentes personales", parsed.consult_pers],
-        ],
-      },
-      {
-        title: "Evaluacion",
-        items: [
-          ["Resumen general", parsed.eval_resumen],
-          ["Pruebas y tecnicas", parsed.eval_pruebas],
-        ],
-      },
-      {
-        title: "Observaciones",
-        items: [
-          ["Observaciones de sesiones", parsed.obs_sesiones],
-          ["Estado mental", parsed.obs_mental],
-        ],
-      },
-      {
-        title: "Hallazgos",
-        items: [
-          ["Hallazgos", parsed.hall_hallazgos],
-          ["Plan de intervencion", parsed.hall_plan],
-        ],
-      },
-      {
-        title: "Conclusiones",
-        items: [
-          ["Conclusiones", parsed.concl_conclusiones],
-          ["Recomendaciones", parsed.concl_recomendaciones],
-          ["Consentimiento", parsed.consentimiento === true ? "Si" : "No"],
-        ],
-      },
-    ];
-
-    return sections
-      .map((section) => ({
-        title: section.title,
-        items: section.items
-          .filter(([, value]) => value !== undefined && value !== null && value !== "")
-          .map(([label, value]) => [label, String(value)] as [string, string]),
-      }))
-      .filter((section) => section.items.length > 0);
-  } catch {
-    return [
-      {
-        title: "Contenido del informe",
-        items: [["Contenido", content]],
-      },
-    ];
+function renderFieldValue(field: ReportFieldDefinition, value: string | boolean | undefined) {
+  if (!value) return null;
+  if (field.type === "image" && typeof value === "string") {
+    return <img src={value} alt={field.label} className="max-h-64 w-auto rounded-xl object-contain" />;
   }
+  return <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-relaxed text-slate-700">{String(value)}</p>;
 }
 
 export default async function ReportDetailPage({
@@ -106,6 +50,14 @@ export default async function ReportDetailPage({
       OR: [{ userId: user.id }, { userId: null }],
     },
     include: {
+      user: {
+        select: {
+          name: true,
+          dni: true,
+          signatureDataUrl: true,
+          stampDataUrl: true,
+        },
+      },
       patient: true,
       versions: {
         orderBy: { version: "desc" },
@@ -114,15 +66,32 @@ export default async function ReportDetailPage({
     },
   });
 
-  if (!report) {
-    notFound();
-  }
+  if (!report) notFound();
 
-  const sections = buildSections(report.content);
-  const pdfFilename = `informe_${report.patient?.name?.replace(/\s+/g, "_") || "sin_paciente"}_${report.id.slice(0, 8)}.pdf`;
+  const parsed = parseStoredReportContent(report.content);
+  const reportKind = normalizeKind((report as { reportKind?: string }).reportKind || parsed.meta?.kind || "informe");
+  const patientCategory = normalizeCategory((report as { patientCategory?: string }).patientCategory || parsed.meta?.category || report.type || "adulto");
+  const sections = getReportSections(reportKind, patientCategory);
+  const fields = parsed.fields || {};
+  const resolvedSignatureName =
+    (typeof fields.signature_name === "string" && fields.signature_name) ||
+    report.user?.name ||
+    "";
+  const resolvedSignatureImage =
+    (typeof fields.signature_image === "string" && fields.signature_image) ||
+    report.user?.signatureDataUrl ||
+    "";
+  const resolvedStampImage =
+    (typeof fields.institution_stamp_image === "string" && fields.institution_stamp_image) ||
+    report.user?.stampDataUrl ||
+    "";
+  const pdfFilename = `documento_${report.patient?.name?.replace(/\s+/g, "_") || "sin_paciente"}_${report.id.slice(0, 8)}.pdf`;
+  const heading = getPdfDocumentHeading(reportKind);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
+      <AutoDownloadPdf buttonId="report-download-pdf" />
+
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/history" className="btn btn-ghost btn-icon rounded-full">
@@ -133,59 +102,101 @@ export default async function ReportDetailPage({
               {report.title}
             </h1>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              {report.patient?.name || "Paciente sin asignar"} · {report.type} · {report.status}
+              {report.patient?.name || "Paciente sin asignar"} - {getReportKindLabel(reportKind)} - {getPatientCategoryLabel(patientCategory)}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <ReportPdfButton targetId="report-detail-print" filename={pdfFilename} />
+          <ReportPdfButton targetId="report-detail-print" filename={pdfFilename} buttonId="report-download-pdf" />
           <Link href={`/dashboard/new-report/editor?id=${report.id}`} className="btn btn-secondary">
             <Edit3 className="h-4 w-4" /> Editar
           </Link>
         </div>
       </div>
 
-      <div id="report-detail-print" className="card space-y-8 p-8">
-        <div className="border-b border-slate-100 pb-6">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-light text-primary">
-            <FileText className="h-7 w-7" />
-          </div>
-          <h2 className="text-2xl font-black text-secondary-text">{report.title}</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Fecha de actualizacion: {new Date(report.updatedAt).toLocaleString("es-ES")}
-          </p>
-          {report.versions.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {report.versions.map((version) => (
-                <span key={version.id} className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-slate-500">
-                  V{version.version} · {new Date(version.createdAt).toLocaleDateString("es-ES")}
-                </span>
-              ))}
+      <div id="report-detail-print" className="card space-y-8 overflow-hidden p-8">
+        <div className="overflow-hidden rounded-[28px] border border-blue-100 bg-white">
+          <div className="h-10 bg-gradient-to-r from-[#a7d3f5] via-[#d8d2ff] to-[#ffffff]" />
+          <div className="px-8 pb-8 pt-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-700">Centro Psicologico Emotiva</p>
+                <p className="mt-1 text-sm font-semibold italic text-slate-700">{EMOTIVA_LEGAL_NOTICE}</p>
+              </div>
+              <div className="w-[160px] shrink-0">
+                <img src="/emotiva-dashboard-logo.jpeg" alt="Centro Psicologico Emotiva" className="h-auto w-full object-contain" />
+              </div>
             </div>
-          )}
+
+            <div className="mt-8 text-center">
+              <h2 className="text-4xl font-black tracking-tight text-slate-900">{heading}</h2>
+              <p className="mt-3 text-sm font-semibold text-slate-500">{report.title}</p>
+              <p className="mt-1 text-sm font-medium text-slate-400">
+                Actualizado: {new Date(report.updatedAt).toLocaleString("es-ES")}
+              </p>
+            </div>
+
+            {report.versions.length > 0 && (
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {report.versions.map((version) => (
+                  <span key={version.id} className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                    V{version.version} - {new Date(version.createdAt).toLocaleDateString("es-ES")}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {sections.length === 0 ? (
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-sm font-medium text-slate-500">
-            Este informe aun no tiene contenido estructurado para mostrar.
-          </div>
-        ) : (
-          sections.map((section) => (
-            <section key={section.title} className="space-y-4">
+        {sections.map((section) => {
+          const visibleFields = section.fields.filter((field) => {
+            const value = fields[field.key];
+            return value !== undefined && value !== null && value !== "";
+          });
+
+          if (visibleFields.length === 0) return null;
+
+          return (
+            <section key={section.id} className="space-y-4">
               <h3 className="text-lg font-extrabold text-secondary-text">{section.title}</h3>
               <div className="grid gap-4 md:grid-cols-2">
-                {section.items.map(([label, value]) => (
-                  <div key={`${section.title}-${label}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">{label}</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-relaxed text-slate-700">
-                      {value}
-                    </p>
+                {visibleFields.map((field) => (
+                  <div key={field.key} className={`rounded-2xl border border-slate-100 bg-slate-50 p-4 ${field.type === "textarea" || field.type === "image" ? "md:col-span-2" : ""}`}>
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">{field.label}</p>
+                    {renderFieldValue(field, fields[field.key])}
                   </div>
                 ))}
               </div>
             </section>
-          ))
-        )}
+          );
+        })}
+
+        <section className="rounded-[28px] border border-slate-200 bg-white p-6">
+          <h3 className="text-lg font-extrabold text-secondary-text">Firma y sello</h3>
+          <div className="mt-5 grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wider text-slate-400">Psicologa evaluadora</p>
+              <p className="mt-2 text-sm font-bold text-secondary-text">{resolvedSignatureName || "Pendiente de firma"}</p>
+              {resolvedSignatureImage ? (
+                <img src={resolvedSignatureImage} alt="Firma" className="mt-4 max-h-32 w-auto object-contain" />
+              ) : (
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-400">
+                  Si no hay firma digital subida, imprime el documento y firma manualmente.
+                </div>
+              )}
+            </div>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-xs font-black uppercase tracking-wider text-slate-400">Sello institucional</p>
+              {resolvedStampImage ? (
+                <img src={resolvedStampImage} alt="Sello institucional" className="mt-4 max-h-32 w-auto object-contain" />
+              ) : (
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-400">
+                  Si no hay sello digital subido, imprime el documento y sella manualmente.
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

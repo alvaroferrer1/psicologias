@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { requireAdminUser } from "@/lib/auth";
+import { isValidEmail, isValidSpanishDni, normalizeDni, normalizeEmail, validatePasswordStrength } from "@/lib/validators";
 import {
   createAppSession,
   getCurrentSessionToken,
@@ -13,11 +15,68 @@ import {
   revokeCurrentSession,
 } from "@/lib/auth";
 
-const SELF_REGISTRATION_ENABLED = process.env.ENABLE_SELF_REGISTRATION === "true";
+const SELF_REGISTRATION_ENABLED = process.env.ENABLE_SELF_REGISTRATION !== "false";
+
+function buildEmailShell(input: { title: string; intro: string; actionUrl: string; actionLabel: string; footer?: string }) {
+  return `
+    <div style="margin:0;padding:24px;background:#f4f7fb;font-family:Arial,sans-serif;color:#0f172a;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5edf7;border-radius:20px;overflow:hidden;">
+        <div style="height:14px;background:linear-gradient(90deg,#a7d3f5 0%,#d8d2ff 55%,#ffffff 100%);"></div>
+        <div style="padding:32px;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:13px;letter-spacing:2px;font-weight:700;color:#1e3a8a;text-transform:uppercase;">Centro Psicologico Emotiva</div>
+            <h1 style="margin:12px 0 0;font-size:28px;line-height:1.15;">${input.title}</h1>
+          </div>
+          <p style="font-size:15px;line-height:1.7;margin:0 0 18px;">${input.intro}</p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${input.actionUrl}" style="display:inline-block;background:#1967d2;color:#ffffff;text-decoration:none;padding:14px 22px;border-radius:12px;font-weight:700;">
+              ${input.actionLabel}
+            </a>
+          </div>
+          <p style="font-size:12px;line-height:1.7;color:#475569;margin:0 0 8px;">
+            Este documento carece de valor medico-legal y es para uso exclusivamente profesional.
+          </p>
+          <p style="font-size:12px;line-height:1.7;color:#64748b;margin:0;">
+            ${input.footer || "Si no has solicitado esta accion, puedes ignorar este correo."}
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function sendEmailIfConfigured(input: { to: string; subject: string; html: string }) {
+  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+    return { sent: false, reason: "missing_config" as const };
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM_EMAIL,
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return { sent: false, reason: "provider_error" as const, errorText };
+  }
+
+  return { sent: true };
+}
 
 export async function registerUser(formData: FormData) {
   try {
-    if (!SELF_REGISTRATION_ENABLED) {
+    const invitationToken = String(formData.get("invitationToken") || "").trim();
+
+    if (!SELF_REGISTRATION_ENABLED && !invitationToken) {
       return {
         success: false,
         error: "El alta de nuevas cuentas esta desactivada. Contacta con la administracion del centro.",
@@ -25,20 +84,52 @@ export async function registerUser(formData: FormData) {
     }
 
     const name = String(formData.get("name") || "").trim();
-    const email = String(formData.get("email") || "").trim().toLowerCase();
+    const email = normalizeEmail(String(formData.get("email") || ""));
     const password = String(formData.get("password") || "");
+    const dni = normalizeDni(String(formData.get("dni") || ""));
+    let invitationRole = "PSYCHOLOGIST";
 
     if (!name || !email || !password) {
       return { success: false, error: "Todos los campos obligatorios." };
     }
 
-    if (password.length < 8) {
-      return { success: false, error: "La contrasena debe tener al menos 8 caracteres." };
+    if (!isValidEmail(email)) {
+      return { success: false, error: "Introduce un email valido." };
+    }
+
+    if (!isValidSpanishDni(dni)) {
+      return { success: false, error: "El DNI profesional no tiene un formato valido." };
+    }
+
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return { success: false, error: passwordError };
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
+      await logAudit({ action: "register.duplicate_email", entityType: "user", metadata: { email } });
       return { success: false, error: "Este email ya esta registrado." };
+    }
+
+    if (invitationToken) {
+      const invitation = await prisma.invitation.findFirst({
+        where: {
+          token: invitationToken,
+          acceptedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!invitation) {
+        return { success: false, error: "La invitacion ya no es valida." };
+      }
+
+      if (normalizeEmail(invitation.email) !== email) {
+        return { success: false, error: "El email no coincide con la invitacion recibida." };
+      }
+
+      invitationRole = invitation.role || "PSYCHOLOGIST";
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -47,9 +138,18 @@ export async function registerUser(formData: FormData) {
       data: {
         name,
         email,
+        dni: dni || null,
+        role: invitationRole,
         password: hashedPassword,
       },
     });
+
+    if (invitationToken) {
+      await prisma.invitation.updateMany({
+        where: { token: invitationToken, acceptedAt: null },
+        data: { acceptedAt: new Date() },
+      });
+    }
 
     await createAppSession(user.id);
     await logAudit({ userId: user.id, action: "register", entityType: "user", entityId: user.id });
@@ -63,22 +163,43 @@ export async function registerUser(formData: FormData) {
 
 export async function loginUser(formData: FormData) {
   try {
-    const email = String(formData.get("email") || "").trim().toLowerCase();
+    const email = normalizeEmail(String(formData.get("email") || ""));
     const password = String(formData.get("password") || "");
 
     if (!email || !password) {
       return { success: false, error: "Faltan datos." };
     }
 
+    if (!isValidEmail(email)) {
+      return { success: false, error: "Introduce un email valido." };
+    }
+
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
+      await logAudit({ action: "login.failed", entityType: "user", metadata: { email, reason: "user_not_found" } });
       return { success: false, error: "Credenciales invalidas." };
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      });
+      await logAudit({ userId: user.id, action: "login.failed", entityType: "user", entityId: user.id, metadata: { reason: "password_mismatch" } });
       return { success: false, error: "Credenciales invalidas." };
     }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    });
 
     await createAppSession(user.id);
     await logAudit({ userId: user.id, action: "login", entityType: "user", entityId: user.id });
@@ -90,9 +211,91 @@ export async function loginUser(formData: FormData) {
   }
 }
 
+export async function createInvitation(input: { email: string; role: string }) {
+  try {
+    const admin = await requireAdminUser();
+    const email = normalizeEmail(input.email);
+    const role = ["ADMIN", "PSYCHOLOGIST", "READONLY"].includes(input.role) ? input.role : "PSYCHOLOGIST";
+
+    if (!isValidEmail(email)) {
+      return { success: false, error: "Introduce un email valido." };
+    }
+
+    const token = randomUUID();
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
+    const invitation = await prisma.invitation.create({
+      data: {
+        email,
+        role,
+        token,
+        invitedByUserId: admin.id,
+        expiresAt,
+      },
+    });
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const invitationUrl = `${baseUrl}/?mode=register&invite=${token}&email=${encodeURIComponent(email)}`;
+
+    const delivery = await sendEmailIfConfigured({
+      to: email,
+      subject: "Invitacion a Emotiva PsyReport",
+      html: buildEmailShell({
+        title: "Invitacion al equipo",
+        intro: `Has sido invitada a Emotiva PsyReport con el rol <strong>${role}</strong>. Pulsa el boton para completar tu registro y acceder al sistema.`,
+        actionUrl: invitationUrl,
+        actionLabel: "Completar registro",
+      }),
+    });
+
+    await logAudit({
+      userId: admin.id,
+      action: "invitation.create",
+      entityType: "invitation",
+      entityId: invitation.id,
+      metadata: { email, role },
+    });
+
+    revalidatePath("/dashboard/team");
+    return { success: true, invitationUrl, emailSent: delivery.sent, emailReason: delivery.sent ? null : delivery.reason };
+  } catch (error) {
+    console.error("Invitation error:", error);
+    return { success: false, error: "No se pudo crear la invitacion." };
+  }
+}
+
+export async function getInvitations() {
+  try {
+    await requireAdminUser();
+    return await prisma.invitation.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { invitedByUser: true },
+    });
+  } catch (error) {
+    console.error("Get invitations error:", error);
+    return [];
+  }
+}
+
+export async function getInvitationByToken(token: string) {
+  try {
+    if (!token) return { success: false, invitation: null };
+    const invitation = await prisma.invitation.findFirst({
+      where: {
+        token,
+        acceptedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+    return { success: Boolean(invitation), invitation };
+  } catch (error) {
+    console.error("Get invitation token error:", error);
+    return { success: false, invitation: null };
+  }
+}
+
 export async function forgotPassword(email: string) {
   try {
-    const safeEmail = email.trim().toLowerCase();
+    const safeEmail = normalizeEmail(email);
     if (!safeEmail) {
       return { success: false, error: "Introduce un email valido." };
     }
@@ -126,6 +329,26 @@ export async function forgotPassword(email: string) {
       metadata: { email: safeEmail },
     });
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
+    const resetUrl = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(safeEmail)}`;
+    const delivery = await sendEmailIfConfigured({
+      to: safeEmail,
+      subject: "Recuperacion de acceso a Emotiva PsyReport",
+      html: buildEmailShell({
+        title: "Recuperacion de contrasena",
+        intro: "Hemos recibido una solicitud para restablecer tu contrasena. Pulsa el boton para crear una nueva contrasena y recuperar el acceso.",
+        actionUrl: resetUrl,
+        actionLabel: "Restablecer contrasena",
+      }),
+    });
+
+    if (delivery.sent) {
+      return {
+        success: true,
+        message: "Si el correo existe, se le enviara un email de recuperacion.",
+      };
+    }
+
     if (process.env.NODE_ENV !== "production") {
       return {
         success: true,
@@ -135,8 +358,8 @@ export async function forgotPassword(email: string) {
     }
 
     return {
-      success: true,
-      message: "Solicitud registrada. Contacta con la administracion para completar la recuperacion segura de la cuenta.",
+      success: false,
+      error: "El sistema de correo no esta configurado todavia. Falta conectar un proveedor real para enviar emails.",
     };
   } catch (error) {
     console.error("Forgot password err:", error);

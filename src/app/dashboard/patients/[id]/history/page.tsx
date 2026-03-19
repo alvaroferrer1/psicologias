@@ -93,6 +93,9 @@ export default async function PatientHistoryPage({
           title: document.title,
           documentType: document.documentType,
           url: document.url,
+          fileName: document.fileName,
+          mimeType: document.mimeType,
+          sizeBytes: document.sizeBytes,
           notes: document.notes,
           createdAt: document.createdAt.toISOString(),
         }))}

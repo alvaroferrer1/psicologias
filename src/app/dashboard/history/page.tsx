@@ -1,27 +1,46 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Plus, FileText, CheckCircle2, Clock, RefreshCcw, Edit3, BarChart3 } from "lucide-react";
-import HistoryClientFilters from "./HistoryClientFilters";
+import {
+  BarChart3,
+  CheckCircle2,
+  Clock,
+  Edit3,
+  FileText,
+  Plus,
+  RefreshCcw,
+} from "lucide-react";
 import { ExportButton } from "@/components/ExportButton";
 import { requireCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getPatientCategoryLabel, getReportKindLabel } from "@/lib/report-templates";
+import { cn } from "@/lib/utils";
+import HistoryClientFilters from "./HistoryClientFilters";
+
+function isCompletedStatus(status: string) {
+  return status === "Completado" || status === "Finalizado";
+}
+
+function isReviewStatus(status: string) {
+  return status === "En revision" || status === "En revisión";
+}
 
 export default async function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; kind?: string; status?: string }>;
 }) {
   const user = await requireCurrentUser();
   const resolvedSearchParams = await searchParams;
   const query = resolvedSearchParams?.q || "";
-  const typeFilter = resolvedSearchParams?.type || "";
+  const categoryFilter = resolvedSearchParams?.category || "";
+  const kindFilter = resolvedSearchParams?.kind || "";
   const statusFilter = resolvedSearchParams?.status || "";
 
   const where: Prisma.ReportWhereInput = {
     deletedAt: null,
     OR: [{ userId: user.id }, { userId: null }],
   };
+
   const conditions: Prisma.ReportWhereInput[] = [];
 
   if (query) {
@@ -32,12 +51,23 @@ export default async function HistoryPage({
       ],
     });
   }
-  if (typeFilter) {
-    conditions.push({ type: typeFilter });
+
+  if (categoryFilter) {
+    conditions.push({
+      OR: [{ patientCategory: categoryFilter }, { type: categoryFilter }],
+    });
   }
+
+  if (kindFilter) {
+    conditions.push({
+      OR: [{ reportKind: kindFilter }, { type: kindFilter }],
+    });
+  }
+
   if (statusFilter) {
     conditions.push({ status: statusFilter });
   }
+
   if (conditions.length > 0) {
     where.AND = conditions;
   }
@@ -48,27 +78,20 @@ export default async function HistoryPage({
     orderBy: { updatedAt: "desc" },
   });
 
-  const completedReports = reports.filter((report) => report.status === "Completado" || report.status === "Finalizado").length;
+  const completedReports = reports.filter((report) => isCompletedStatus(report.status)).length;
   const draftReports = reports.filter((report) => report.status === "Borrador").length;
   const currentMonth = new Date().getMonth();
   const reportsThisMonth = reports.filter((report) => new Date(report.updatedAt).getMonth() === currentMonth).length;
 
   const exportData = reports.map((report) => ({
     ID: report.id,
-    Paciente: report.patient?.name || "Sin Paciente",
+    Paciente: report.patient?.name || "Sin paciente",
     Documento: report.title,
-    Tipo: report.type,
+    Formato: getReportKindLabel(report.reportKind || report.type),
+    Categoria: getPatientCategoryLabel(report.patientCategory || report.type),
     Estado: report.status,
     Fecha: new Date(report.createdAt).toLocaleString("es-ES"),
   }));
-
-  const typeColors: Record<string, string> = {
-    TC: "border-emerald-200 bg-emerald-100 text-emerald-700",
-    TL: "border-sky-200 bg-sky-100 text-sky-700",
-    TCC: "border-orange-200 bg-orange-100 text-orange-700",
-    TF: "border-teal-200 bg-teal-100 text-teal-700",
-    TP: "border-purple-200 bg-purple-100 text-purple-700",
-  };
 
   return (
     <div className="space-y-6">
@@ -78,8 +101,8 @@ export default async function HistoryPage({
             Mis Informes
           </h2>
           <p className="mt-1 font-medium text-slate-500">
-            {reports.length} informe{reports.length !== 1 ? "s" : ""} encontrado{reports.length !== 1 ? "s" : ""}
-            {(query || typeFilter || statusFilter) && " (filtrado)"}
+            {reports.length} documento{reports.length !== 1 ? "s" : ""} encontrado{reports.length !== 1 ? "s" : ""}
+            {(query || categoryFilter || kindFilter || statusFilter) && " (filtrado)"}
           </p>
         </div>
         <div className="flex gap-2">
@@ -95,7 +118,13 @@ export default async function HistoryPage({
         </div>
       </div>
 
-      <HistoryClientFilters key={`${query}|${typeFilter}|${statusFilter}`} currentQ={query} currentType={typeFilter} currentStatus={statusFilter} />
+      <HistoryClientFilters
+        key={`${query}|${categoryFilter}|${kindFilter}|${statusFilter}`}
+        currentQ={query}
+        currentCategory={categoryFilter}
+        currentKind={kindFilter}
+        currentStatus={statusFilter}
+      />
 
       <div className="grid gap-4 md:grid-cols-4">
         <div className="card p-5">
@@ -117,12 +146,18 @@ export default async function HistoryPage({
       </div>
 
       <div className="card overflow-hidden">
+        <div className="border-b border-secondary-border bg-slate-50/70 px-4 py-3">
+          <div className="mx-auto h-1.5 w-40 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full w-24 rounded-full bg-gradient-to-r from-primary via-blue-400 to-violet-300" />
+          </div>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full whitespace-nowrap text-left text-sm">
             <thead className="border-b border-secondary-border bg-slate-50/50 font-bold text-slate-500">
               <tr>
                 <th className="rounded-tl-xl px-6 py-4 text-[13px] font-bold uppercase tracking-wide">Paciente / Documento</th>
                 <th className="px-6 py-4 text-[13px] font-bold uppercase tracking-wide">Tipo</th>
+                <th className="px-6 py-4 text-[13px] font-bold uppercase tracking-wide">Formato</th>
                 <th className="px-6 py-4 text-[13px] font-bold uppercase tracking-wide">Fecha</th>
                 <th className="px-6 py-4 text-[13px] font-bold uppercase tracking-wide">Estado</th>
                 <th className="px-6 py-4 text-[13px] font-bold uppercase tracking-wide">Versiones</th>
@@ -132,41 +167,56 @@ export default async function HistoryPage({
             <tbody className="divide-y divide-secondary-border/60 font-medium text-slate-600">
               {reports.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="bg-slate-50 p-12 text-center">
+                  <td colSpan={7} className="bg-slate-50 p-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
                         <FileText className="h-7 w-7 text-slate-400" />
                       </div>
-                      <p className="text-[15px] font-bold text-slate-400">No se encontraron informes</p>
+                      <p className="text-[15px] font-bold text-slate-400">No se encontraron documentos</p>
                       <p className="text-[13px] text-slate-400">
-                        Prueba a cambiar los filtros o <Link href="/dashboard/new-report" className="font-bold text-primary hover:underline">crea un nuevo informe</Link>
+                        Prueba a cambiar los filtros o{" "}
+                        <Link href="/dashboard/new-report" className="font-bold text-primary hover:underline">
+                          crea un nuevo documento
+                        </Link>
                       </p>
                     </div>
                   </td>
                 </tr>
               )}
+
               {reports.map((report) => {
-                const isCompleted = report.status === "Completado" || report.status === "Finalizado";
+                const isCompleted = isCompletedStatus(report.status);
                 const isBorrador = report.status === "Borrador";
-                const isReview = report.status === "En revisión" || report.status === "En revisiÃ³n";
+                const isReview = isReviewStatus(report.status);
+
                 return (
                   <tr key={report.id} className="group transition-colors hover:bg-primary-light/40">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm", isCompleted ? "border-emerald-100 bg-emerald-50 text-emerald-600" : "border-amber-100 bg-amber-50 text-amber-600")}>
+                        <div
+                          className={cn(
+                            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+                            isCompleted ? "border-emerald-100 bg-emerald-50 text-emerald-600" : "border-blue-100 bg-blue-50 text-primary"
+                          )}
+                        >
                           <FileText className="h-5 w-5" />
                         </div>
                         <div>
-                          <Link href={`/dashboard/history/${report.id}`} className="text-[15px] font-bold text-secondary-text transition-colors hover:text-primary">
-                            {report.patient?.name || "Paciente Eliminado"}
+                          <Link prefetch={false} href={`/dashboard/history/${report.id}`} className="text-[15px] font-bold text-secondary-text transition-colors hover:text-primary">
+                            {report.patient?.name || "Paciente eliminado"}
                           </Link>
                           <p className="mt-0.5 max-w-[300px] truncate text-[13px] text-slate-400">{report.title}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={cn("inline-flex rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-wider", typeColors[report.type] || "border-slate-200 bg-slate-100 text-slate-600")}>
-                        {report.type}
+                      <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-blue-800">
+                        {getPatientCategoryLabel(report.patientCategory || report.type)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-violet-800">
+                        {getReportKindLabel(report.reportKind || report.type)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-[13px] font-medium text-slate-500">
@@ -194,22 +244,21 @@ export default async function HistoryPage({
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/dashboard/history/${report.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-[12px] font-bold text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800">
+                        <Link prefetch={false} href={`/dashboard/history/${report.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-[12px] font-bold text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800">
                           Ver
                         </Link>
+                        <Link
+                          prefetch={false}
+                          href={`/dashboard/history/${report.id}?download=1`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-[12px] font-bold text-primary transition-colors hover:border-primary/20 hover:bg-primary-light"
+                        >
+                          PDF
+                        </Link>
                         {(isBorrador || isReview) && (
-                          <Link href={`/dashboard/new-report/editor?id=${report.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-[12px] font-bold text-primary transition-colors hover:border-primary/20 hover:bg-primary-light">
+                          <Link prefetch={false} href={`/dashboard/new-report/editor?id=${report.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-[12px] font-bold text-primary transition-colors hover:border-primary/20 hover:bg-primary-light">
                             <Edit3 className="h-3.5 w-3.5" /> Continuar
                           </Link>
                         )}
-                        <ExportButton
-                          data={[exportData.find((row) => row.ID === report.id)!]}
-                          filename={`informe_${report.patient?.name?.replace(/\s+/g, "_") || "sin_paciente"}_${report.id.slice(0, 8)}.csv`}
-                          className="btn btn-ghost btn-icon border border-transparent text-slate-400 transition-all hover:border-primary/20 hover:text-primary active:scale-95"
-                          title="Exportar este informe"
-                          label=""
-                          icon
-                        />
                       </div>
                     </td>
                   </tr>

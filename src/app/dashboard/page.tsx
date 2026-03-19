@@ -2,12 +2,16 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock, FileText, Plus, ShieldCheck, Users, Video } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/auth";
+import { getBirthdayAlert } from "@/lib/patient-utils";
+import { parseStoredReportContent } from "@/lib/report-content";
+import { getReportKindLabel } from "@/lib/report-templates";
 
 export default async function DashboardPage() {
   const user = await requireCurrentUser();
   const ownershipFilter = { OR: [{ userId: user.id }, { userId: null }], deletedAt: null as null };
 
-  const totalPatients = await prisma.patient.count({ where: ownershipFilter });
+  const activePatients = await prisma.patient.count({ where: { ...ownershipFilter, status: "activo" } });
+  const pausedPatients = await prisma.patient.count({ where: { ...ownershipFilter, status: "pausa" } });
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -16,7 +20,7 @@ export default async function DashboardPage() {
   });
 
   const pendingReports = await prisma.report.count({
-    where: { ...ownershipFilter, status: { in: ["Borrador", "En revisión", "En revisiÃ³n"] } },
+    where: { ...ownershipFilter, status: { in: ["Borrador", "En revision", "En revisión"] } },
   });
 
   const startOfDay = new Date();
@@ -42,6 +46,21 @@ export default async function DashboardPage() {
     take: 5,
   });
 
+  const patientsForBirthdays = await prisma.patient.findMany({
+    where: { ...ownershipFilter, patientType: { in: ["infantil", "adolescente"] } },
+    orderBy: { updatedAt: "desc" },
+    take: 12,
+  });
+
+  const birthdayAlerts = patientsForBirthdays
+    .map((patient) => ({
+      id: patient.id,
+      name: patient.name,
+      alert: getBirthdayAlert(patient.birthDate, patient.patientType),
+    }))
+    .filter((item): item is { id: string; name: string; alert: string } => Boolean(item.alert))
+    .slice(0, 3);
+
   const greetingHour = new Date().getHours();
   const greeting = greetingHour < 13 ? "Buenos dias" : greetingHour < 20 ? "Buenas tardes" : "Buenas noches";
 
@@ -49,7 +68,7 @@ export default async function DashboardPage() {
     {
       label: "Sesion mas cercana",
       value: upcomingAppointments[0]
-        ? `${upcomingAppointments[0].patient?.name || "Paciente"} · ${new Date(upcomingAppointments[0].date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+        ? `${upcomingAppointments[0].patient?.name || "Paciente"} - ${new Date(upcomingAppointments[0].date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
         : "No hay citas cercanas",
     },
     {
@@ -58,14 +77,19 @@ export default async function DashboardPage() {
     },
     {
       label: "Pacientes activos",
-      value: `${totalPatients} en seguimiento`,
+      value: `${activePatients} en seguimiento`,
+    },
+    {
+      label: "Pacientes en pausa",
+      value: `${pausedPatients} en pausa`,
     },
   ];
 
   const stats = [
-    { label: "Pacientes activos", value: String(totalPatients), icon: Users, tone: "bg-primary-light text-primary" },
+    { label: "Pacientes activos", value: String(activePatients), icon: Users, tone: "bg-primary-light text-primary" },
+    { label: "Pacientes en pausa", value: String(pausedPatients), icon: Clock, tone: "bg-amber-50 text-amber-600" },
     { label: "Informes del mes", value: String(reportsThisMonth), icon: FileText, tone: "bg-emerald-50 text-emerald-600" },
-    { label: "Pendientes", value: String(pendingReports), icon: Clock, tone: "bg-amber-50 text-amber-600" },
+    { label: "Pendientes", value: String(pendingReports), icon: FileText, tone: "bg-blue-50 text-blue-600" },
     { label: "Sesiones hoy", value: String(sessionsToday), icon: CalendarDays, tone: "bg-teal-50 text-teal-600" },
   ];
 
@@ -113,7 +137,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {stats.map((stat) => (
           <div key={stat.label} className="card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lg">
             <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${stat.tone}`}>
@@ -146,11 +170,12 @@ export default async function DashboardPage() {
               <div className="divide-y divide-slate-100">
                 {recentReports.map((report) => {
                   const isCompleted = report.status === "Completado" || report.status === "Finalizado";
+                  const parsed = parseStoredReportContent(report.content);
                   return (
                     <Link key={report.id} href={`/dashboard/history/${report.id}`} className="flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-slate-50">
                       <div className="min-w-0">
                         <p className="truncate font-bold text-secondary-text">{report.title}</p>
-                        <p className="truncate text-sm text-slate-500">{report.patient?.name || "Paciente sin asignar"}</p>
+                        <p className="truncate text-sm text-slate-500">{report.patient?.name || "Paciente sin asignar"} - {getReportKindLabel(parsed.meta?.kind || "informe")}</p>
                       </div>
                       <span className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider ${isCompleted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                         {report.status}
@@ -192,6 +217,16 @@ export default async function DashboardPage() {
           </div>
 
           <div className="mt-5 space-y-3">
+            {birthdayAlerts.length > 0 && (
+              <div className="rounded-[22px] border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-amber-700">Alertas de cumpleaños</p>
+                <div className="mt-3 space-y-2">
+                  {birthdayAlerts.map((item) => (
+                    <p key={item.id} className="text-sm font-semibold text-amber-900">{item.name}: {item.alert}</p>
+                  ))}
+                </div>
+              </div>
+            )}
             {upcomingAppointments.length === 0 ? (
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center text-sm font-medium text-slate-500">
                 No hay sesiones programadas.

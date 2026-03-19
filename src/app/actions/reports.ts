@@ -2,11 +2,12 @@
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
-import { logAudit, requireCurrentUser } from "@/lib/auth"
+import { logAudit, requireEditableUser } from "@/lib/auth"
+import { serializeStoredReportContent } from "@/lib/report-content"
 
 export async function generateAIReport(patientId: string, type: string) {
   try {
-    const user = await requireCurrentUser()
+    const user = await requireEditableUser()
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     const patient = await prisma.patient.findFirst({
@@ -19,16 +20,15 @@ export async function generateAIReport(patientId: string, type: string) {
 
     const patientName = patient ? patient.name : "Paciente sin identificar"
     const today = new Date().toISOString().slice(0, 10)
-    const generatedContent = JSON.stringify({
-      prof_fecha: today,
-      pac_nombre: patientName,
-      consult_motivo: `Borrador inicial de ${type.toLowerCase()} pendiente de completar por la profesional responsable.`,
-      eval_resumen: `Se ha generado una estructura base para ${patientName}. Este contenido debe revisarse, ampliarse y validarse antes de finalizar el informe.`,
-      hall_hallazgos: "Pendiente de valoracion clinica.",
-      hall_plan: "Pendiente de definir plan de intervencion.",
-      concl_conclusiones: "Borrador clinico pendiente de revision.",
-      concl_recomendaciones: "Completar tras la evaluacion profesional.",
-      consentimiento: false,
+    const generatedContent = serializeStoredReportContent({
+      meta: { kind: "informe", category: "adulto" },
+      fields: {
+        prof_fecha: today,
+        pac_nombre: patientName,
+        consult_reason: `Borrador inicial de ${type.toLowerCase()} pendiente de completar por la profesional responsable.`,
+        results_summary: `Se ha generado una estructura base para ${patientName}. Este contenido debe revisarse, ampliarse y validarse antes de finalizar el informe.`,
+        clinical_impression: "Borrador clinico pendiente de revision.",
+      },
     })
 
     const report = await prisma.report.create({
@@ -36,6 +36,8 @@ export async function generateAIReport(patientId: string, type: string) {
         userId: user.id,
         title: `Informe ${type} - ${new Date().toLocaleDateString()}`,
         type,
+        reportKind: "informe",
+        patientCategory: patient?.patientType || "adulto",
         status: "Borrador",
         content: generatedContent,
         patientId,
@@ -61,7 +63,7 @@ export async function generateAIReport(patientId: string, type: string) {
 
 export async function getReportById(reportId: string) {
   try {
-    const user = await requireCurrentUser()
+    const user = await requireEditableUser()
     if (!reportId) {
       return { success: false, error: "Informe no especificado." }
     }

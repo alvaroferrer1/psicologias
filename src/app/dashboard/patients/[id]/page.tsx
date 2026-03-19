@@ -1,8 +1,28 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Calendar, CheckCircle2, Clock, FileText, Mail, Phone, Plus, Video } from "lucide-react";
-import { prisma } from "@/lib/prisma";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  FileText,
+  Mail,
+  Phone,
+  Plus,
+  UserSquare2,
+  Video,
+} from "lucide-react";
+import { PatientEditSheet } from "@/components/PatientEditSheet";
 import { requireCurrentUser } from "@/lib/auth";
+import {
+  calculateAge,
+  getBirthdayAlert,
+  getPatientStatusClasses,
+  getPatientStatusLabel,
+  getPatientTypeLabel,
+} from "@/lib/patient-utils";
+import { prisma } from "@/lib/prisma";
 
 type TimelineItem = {
   id: string;
@@ -18,9 +38,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
   const user = await requireCurrentUser();
   const { id } = await params;
 
-  if (!id) {
-    notFound();
-  }
+  if (!id) notFound();
 
   const patient = await prisma.patient.findFirst({
     where: {
@@ -44,6 +62,9 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
 
   const upcomingAppointments = patient.appointments.filter((appointment) => appointment.date >= new Date());
   const completedReports = patient.reports.filter((report) => report.status === "Finalizado" || report.status === "Completado");
+  const patientStatus = patient.status || (patient.active ? "activo" : "pasivo");
+  const age = calculateAge(patient.birthDate);
+  const birthdayAlert = getBirthdayAlert(patient.birthDate, patient.patientType);
 
   const timeline: TimelineItem[] = [
     ...patient.reports.map((report) => ({
@@ -80,7 +101,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
-          <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-[#f7fbfa] to-[#eef8f5] p-6 shadow-sm">
+          <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-[#f5f8ff] to-[#eaf1ff] p-6 shadow-sm">
             <div className={`absolute right-0 top-0 h-44 w-44 rounded-full opacity-15 blur-3xl ${patient.color}`} />
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex items-start gap-4">
@@ -89,13 +110,13 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                 </div>
                 <div>
                   <h2 className="text-3xl font-black tracking-tight text-secondary-text">{patient.name}</h2>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">{patient.description || "Seguimiento clinico"}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">{getPatientTypeLabel(patient.patientType)}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wider text-slate-500 shadow-sm">
                       ID {patient.id.slice(0, 8)}
                     </span>
-                    <span className="rounded-full bg-primary-light px-3 py-1 text-[11px] font-black uppercase tracking-wider text-primary">
-                      {patient.active ? "Activo" : "Inactivo"}
+                    <span className={`rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-wider ${getPatientStatusClasses(patientStatus)}`}>
+                      {getPatientStatusLabel(patientStatus)}
                     </span>
                   </div>
                 </div>
@@ -105,9 +126,24 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                 <Link href={`/dashboard/new-report?patient=${patient.id}`} className="btn btn-primary">
                   <Plus className="h-4 w-4" /> Nuevo informe
                 </Link>
-                <Link href={`/dashboard/patients/${patient.id}/history`} className="btn btn-secondary">
-                  <FileText className="h-4 w-4" /> Ver historial completo
-                </Link>
+                <PatientEditSheet
+                  patient={{
+                    id: patient.id,
+                    name: patient.name,
+                    email: patient.email,
+                    phone: patient.phone,
+                    dni: patient.dni,
+                    birthDate: patient.birthDate?.toISOString() || null,
+                    address: patient.address,
+                    patientType: patient.patientType,
+                    status: patient.status,
+                    guardianName: patient.guardianName,
+                    guardianDni: patient.guardianDni,
+                    guardianPhone: patient.guardianPhone,
+                    guardianEmail: patient.guardianEmail,
+                    clinicalAlerts: patient.clinicalAlerts,
+                  }}
+                />
               </div>
             </div>
 
@@ -131,6 +167,16 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
             <div className="card p-6">
               <h3 className="text-lg font-extrabold text-secondary-text">Datos de contacto</h3>
               <div className="mt-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">DNI</p>
+                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.dni || "No especificado"}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Edad</p>
+                    <p className="mt-2 text-sm font-semibold text-secondary-text">{age !== null ? `${age} anos` : "No especificada"}</p>
+                  </div>
+                </div>
                 <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-400">
                     <Phone className="h-4 w-4" />
@@ -154,39 +200,53 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                     <Calendar className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Alta</p>
-                    <p className="text-sm font-semibold text-secondary-text">{new Date(patient.createdAt).toLocaleDateString("es-ES")}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Fecha de nacimiento</p>
+                    <p className="text-sm font-semibold text-secondary-text">
+                      {patient.birthDate ? new Date(patient.birthDate).toLocaleDateString("es-ES") : "No especificada"}
+                    </p>
                   </div>
                 </div>
+                {birthdayAlert && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-700">Aviso de cumpleanos</p>
+                    <p className="mt-2 text-sm font-semibold text-amber-900">{birthdayAlert}</p>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="card p-6">
-              <h3 className="text-lg font-extrabold text-secondary-text">Proxima accion recomendada</h3>
-              <div className="mt-5 rounded-[24px] border border-primary/15 bg-primary-light/60 p-5">
-                {upcomingAppointments.length > 0 ? (
-                  <>
-                    <p className="text-xs font-black uppercase tracking-widest text-primary">Siguiente cita</p>
-                    <p className="mt-2 text-lg font-black text-secondary-text">{upcomingAppointments[0].title}</p>
-                    <p className="mt-1 text-sm font-medium text-slate-600">
-                      {new Date(upcomingAppointments[0].date).toLocaleString("es-ES")}
-                    </p>
-                    {upcomingAppointments[0].type === "Videoconsulta" && (
-                      <Link href={`/dashboard/video?appointment=${upcomingAppointments[0].id}`} className="btn btn-primary mt-4">
-                        <Video className="h-4 w-4" /> Entrar en sala
-                      </Link>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-semibold text-slate-600">
-                      No hay citas futuras programadas. Conviene dejar la siguiente sesion cerrada para mantener continuidad.
-                    </p>
-                    <Link href="/dashboard/calendar" className="btn btn-primary mt-4">
-                      <Calendar className="h-4 w-4" /> Programar cita
-                    </Link>
-                  </>
-                )}
+              <h3 className="text-lg font-extrabold text-secondary-text">Datos del apoderado y alertas</h3>
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Apoderado / tutor</p>
+                  <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianName || "No especificado"}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">DNI apoderado</p>
+                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianDni || "No especificado"}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Telefono</p>
+                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianPhone || "No especificado"}</p>
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Email apoderado</p>
+                  <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianEmail || "No especificado"}</p>
+                </div>
+                <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 text-red-600" />
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-widest text-red-600">Alertas clinicas</p>
+                      <p className="mt-2 text-sm font-semibold text-red-900">
+                        {patient.clinicalAlerts || "Sin alertas clinicas registradas."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -287,9 +347,35 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                       </span>
                     </div>
                     <p className="mt-2 text-sm text-slate-500">{new Date(appointment.date).toLocaleString("es-ES")}</p>
+                    {appointment.type === "Videoconsulta" && (
+                      <Link href={`/dashboard/video?appointment=${appointment.id}`} className="btn btn-ghost mt-3 text-primary hover:bg-white">
+                        <Video className="h-4 w-4" /> Entrar
+                      </Link>
+                    )}
                   </div>
                 ))
               )}
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <h3 className="text-lg font-extrabold text-secondary-text">Resumen clinico</h3>
+            <div className="mt-5 space-y-3">
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Tipo de paciente</p>
+                <p className="mt-2 text-sm font-semibold text-secondary-text">{getPatientTypeLabel(patient.patientType)}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Direccion</p>
+                <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.address || "No especificada"}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <div className="flex items-center gap-2">
+                  <UserSquare2 className="h-4 w-4 text-primary" />
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Estado actual</p>
+                </div>
+                <p className="mt-2 text-sm font-semibold text-secondary-text">{getPatientStatusLabel(patientStatus)}</p>
+              </div>
             </div>
           </div>
         </div>
