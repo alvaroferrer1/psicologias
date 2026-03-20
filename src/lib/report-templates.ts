@@ -20,6 +20,12 @@ export type ReportSectionDefinition = {
   fields: ReportFieldDefinition[];
 };
 
+export type PdfReferenceTemplate = {
+  kind: ReportKind;
+  category: PatientCategory;
+  referenceName: string;
+};
+
 export const PATIENT_CATEGORY_OPTIONS: Array<{ value: PatientCategory; label: string }> = [
   { value: "infantil", label: "Ninos" },
   { value: "adolescente", label: "Adolescentes" },
@@ -59,6 +65,38 @@ export function getPdfDocumentHeading(kind?: string | null) {
     default:
       return "INFORME PSICOLOGICO";
   }
+}
+
+export function getPdfReferenceTemplate(kind: ReportKind, category: PatientCategory): PdfReferenceTemplate {
+  const referenceMatrix: Record<ReportKind, Record<PatientCategory, string>> = {
+    historia_clinica: {
+      infantil: "ANAMNESIS NINOS Y ADOLESCENTES. modelo (ninos)",
+      adolescente: "ANAMNESIS NINOS Y ADOLESCENTES. modelo (adolescentes)",
+      adulto: "Anamnesis_Adultos_Emotiva.pdf",
+      pareja: "Anamnesis_Pareja_Emotiva.pdf",
+      familia: "Historia clinica familia (estructura familiar)",
+    },
+    informe: {
+      infantil: "Informe psicologico infantil",
+      adolescente: "Informe psicologico adolescente",
+      adulto: "INFORME PSICOLOGICO EVA - Angelo / ALIOSHA VILLEGAS",
+      pareja: "Informe psicologico pareja",
+      familia: "Informe psicologico familia",
+    },
+    registro: {
+      infantil: "REPORTE DE DANIEL AIMARAA (estructura ninos)",
+      adolescente: "REPORTE PSICOLOGICO T.A - Emmanuel",
+      adulto: "REPORTE PSICOLOGICO - Tatiana Tovar",
+      pareja: "Reporte psicologico pareja",
+      familia: "Reporte psicologico familia",
+    },
+  };
+
+  return {
+    kind,
+    category,
+    referenceName: referenceMatrix[kind][category],
+  };
 }
 
 function baseIdentityFields(): ReportSectionDefinition[] {
@@ -424,6 +462,348 @@ function reportAreasSection(): ReportSectionDefinition {
   };
 }
 
+function adultGeneralDataSection(includeBirthDate: boolean): ReportSectionDefinition {
+  return {
+    id: "datos_generales",
+    title: "I. Datos generales",
+    fields: [
+      { key: "pac_nombre", label: "Apellidos y nombres", type: "text", required: true },
+      { key: "pac_sex", label: "Sexo", type: "text" },
+      { key: "pac_age", label: "Edad", type: "number", required: true },
+      ...(includeBirthDate ? [{ key: "pac_birth_date", label: "Fecha de nacimiento", type: "date" as const }] : []),
+      { key: "pac_dni", label: "DNI / NIE", type: "text" },
+      { key: "therapy_type", label: "Servicio / tipo de atencion", type: "text" },
+      { key: "session_count", label: "Numero de sesiones", type: "number" },
+      { key: "prof_fecha", label: "Fecha del documento", type: "date", required: true },
+      { key: "signature_name", label: "Psicologa evaluadora", type: "text", required: true },
+    ],
+  };
+}
+
+function clinicalTestsSection(): ReportSectionDefinition {
+  return {
+    id: "pruebas",
+    title: "III. Pruebas aplicadas",
+    fields: [{ key: "assessment_methods", label: "Tecnicas e instrumentos utilizados", type: "textarea", rows: 5 }],
+  };
+}
+
+function behavioralObservationSection(title = "IV. Observacion conductual"): ReportSectionDefinition {
+  return {
+    id: "observacion",
+    title,
+    fields: [{ key: "behavioral_observation", label: "Observacion conductual", type: "textarea", rows: 6, required: true }],
+  };
+}
+
+function relevantDataSection(title = "V. Datos relevantes"): ReportSectionDefinition {
+  return {
+    id: "datos_relevantes",
+    title,
+    fields: [{ key: "relevant_data", label: "Datos relevantes", type: "textarea", rows: 5 }],
+  };
+}
+
+function adultClinicalResultsSection(): ReportSectionDefinition {
+  return {
+    id: "resultados",
+    title: "VI. Presentacion de resultados",
+    description: "La presentacion respeta el orden por areas clinicas del modelo de informe.",
+    fields: [
+      { key: "results_summary", label: "Sintesis clinica principal", type: "textarea", required: true, rows: 6 },
+      { key: "area_emotional", label: "Area emocional", type: "textarea", rows: 4 },
+      { key: "area_behavioral", label: "Area conductual", type: "textarea", rows: 4 },
+      { key: "area_cognitive", label: "Area cognitiva", type: "textarea", rows: 4 },
+      { key: "area_family", label: "Area familiar / relacional", type: "textarea", rows: 4 },
+      { key: "area_school", label: "Area academica / laboral", type: "textarea", rows: 4 },
+      { key: "area_social", label: "Area social", type: "textarea", rows: 4 },
+    ],
+  };
+}
+
+function conclusionSection(title = "VII. Conclusiones clinicas"): ReportSectionDefinition {
+  return {
+    id: "conclusion",
+    title,
+    fields: [{ key: "clinical_impression", label: "Conclusiones", type: "textarea", required: true, rows: 5 }],
+  };
+}
+
+function recommendationsSection(title = "VIII. Recomendaciones"): ReportSectionDefinition {
+  return {
+    id: "recomendaciones",
+    title,
+    fields: [
+      { key: "recommendations", label: "Recomendaciones generales", type: "textarea", rows: 5 },
+      { key: "recommendations_family", label: "Recomendaciones para la familia", type: "textarea", rows: 5 },
+      { key: "school_guidance", label: "Indicaciones para colegio / entorno", type: "textarea", rows: 5 },
+    ],
+  };
+}
+
+function signatureSection(title = "IX. Firma"): ReportSectionDefinition {
+  return {
+    id: "firma",
+    title,
+    fields: [
+      { key: "signature_name", label: "Psicologa evaluadora", type: "text", required: true },
+      { key: "signature_image", label: "Firma subida", type: "image" },
+      { key: "institution_stamp_image", label: "Sello institucional", type: "image" },
+    ],
+  };
+}
+
+function getAdultInformeSections(): ReportSectionDefinition[] {
+  return [
+    adultGeneralDataSection(false),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta", type: "textarea", required: true, rows: 5 }],
+    },
+    clinicalTestsSection(),
+    behavioralObservationSection(),
+    relevantDataSection(),
+    adultClinicalResultsSection(),
+    conclusionSection(),
+    recommendationsSection("VIII. Recomendaciones y orientaciones"),
+    signatureSection(),
+  ];
+}
+
+function getChildInformeSections(): ReportSectionDefinition[] {
+  return [
+    adultGeneralDataSection(true),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta", type: "textarea", required: true, rows: 5 }],
+    },
+    clinicalTestsSection(),
+    behavioralObservationSection(),
+    relevantDataSection("V. Datos relevantes del menor y la familia"),
+    {
+      id: "resultados",
+      title: "VI. Presentacion de resultados",
+      fields: [
+        { key: "results_summary", label: "Sintesis clinica", type: "textarea", required: true, rows: 6 },
+        { key: "area_emotional", label: "Area emocional", type: "textarea", rows: 4 },
+        { key: "area_behavioral", label: "Area conductual", type: "textarea", rows: 4 },
+        { key: "area_family", label: "Area familiar", type: "textarea", rows: 4 },
+        { key: "area_school", label: "Area escolar", type: "textarea", rows: 4 },
+        { key: "area_social", label: "Area social", type: "textarea", rows: 4 },
+      ],
+    },
+    conclusionSection(),
+    recommendationsSection(),
+    signatureSection(),
+  ];
+}
+
+function getAdolescentInformeSections(): ReportSectionDefinition[] {
+  return [
+    adultGeneralDataSection(true),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta", type: "textarea", required: true, rows: 5 }],
+    },
+    clinicalTestsSection(),
+    behavioralObservationSection(),
+    relevantDataSection("V. Datos relevantes del adolescente"),
+    {
+      id: "resultados",
+      title: "VI. Presentacion de resultados",
+      fields: [
+        { key: "results_summary", label: "Sintesis clinica", type: "textarea", required: true, rows: 6 },
+        { key: "area_emotional", label: "Area emocional", type: "textarea", rows: 4 },
+        { key: "area_behavioral", label: "Area conductual", type: "textarea", rows: 4 },
+        { key: "area_cognitive", label: "Area cognitiva", type: "textarea", rows: 4 },
+        { key: "area_family", label: "Area familiar", type: "textarea", rows: 4 },
+        { key: "area_school", label: "Area academica", type: "textarea", rows: 4 },
+        { key: "area_social", label: "Area social", type: "textarea", rows: 4 },
+      ],
+    },
+    conclusionSection(),
+    recommendationsSection(),
+    signatureSection(),
+  ];
+}
+
+function getCoupleInformeSections(): ReportSectionDefinition[] {
+  return [
+    adultGeneralDataSection(false),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta de la pareja", type: "textarea", required: true, rows: 5 }],
+    },
+    clinicalTestsSection(),
+    behavioralObservationSection(),
+    relevantDataSection("V. Datos relevantes de la relacion"),
+    {
+      id: "resultados",
+      title: "VI. Presentacion de resultados",
+      fields: [
+        { key: "results_summary", label: "Sintesis clinica", type: "textarea", required: true, rows: 6 },
+        { key: "area_emotional", label: "Area emocional", type: "textarea", rows: 4 },
+        { key: "area_family", label: "Area vincular / relacional", type: "textarea", rows: 4 },
+        { key: "area_social", label: "Area social", type: "textarea", rows: 4 },
+      ],
+    },
+    conclusionSection(),
+    recommendationsSection(),
+    signatureSection(),
+  ];
+}
+
+function getFamilyInformeSections(): ReportSectionDefinition[] {
+  return [
+    adultGeneralDataSection(false),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta familiar", type: "textarea", required: true, rows: 5 }],
+    },
+    clinicalTestsSection(),
+    behavioralObservationSection(),
+    relevantDataSection("V. Datos relevantes de la dinamica familiar"),
+    {
+      id: "resultados",
+      title: "VI. Presentacion de resultados",
+      fields: [
+        { key: "results_summary", label: "Sintesis clinica", type: "textarea", required: true, rows: 6 },
+        { key: "area_emotional", label: "Area emocional", type: "textarea", rows: 4 },
+        { key: "area_family", label: "Area familiar / sistemica", type: "textarea", rows: 4 },
+        { key: "area_social", label: "Area social", type: "textarea", rows: 4 },
+      ],
+    },
+    conclusionSection(),
+    recommendationsSection(),
+    signatureSection(),
+  ];
+}
+
+function getAdultRegistroSections(): ReportSectionDefinition[] {
+  return [
+    progressGeneralDataSection(false),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta", type: "textarea", required: true, rows: 5 }],
+    },
+    {
+      id: "antecedente",
+      title: "III. Antecedente",
+      fields: [{ key: "background", label: "Antecedentes relevantes", type: "textarea", rows: 5 }],
+    },
+    {
+      id: "objetivos",
+      title: "IV. Objetivos",
+      fields: [{ key: "therapy_goals", label: "Objetivos terapeuticos", type: "textarea", required: true, rows: 6 }],
+    },
+    behavioralObservationSection("V. Observacion conductual"),
+    {
+      id: "proceso",
+      title: "VI. Proceso psicologico",
+      fields: [{ key: "progress_summary", label: "Proceso psicologico", type: "textarea", required: true, rows: 8 }],
+    },
+    conclusionSection("VII. Conclusion"),
+    recommendationsSection("VIII. Recomendaciones"),
+    signatureSection("IX. Firma"),
+  ];
+}
+
+function getAdolescentRegistroSections(): ReportSectionDefinition[] {
+  return [
+    progressGeneralDataSection(true),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta", type: "textarea", required: true, rows: 5 }],
+    },
+    {
+      id: "antecedente",
+      title: "III. Antecedente",
+      fields: [{ key: "background", label: "Antecedentes relevantes", type: "textarea", rows: 5 }],
+    },
+    {
+      id: "objetivos",
+      title: "IV. Objetivos",
+      fields: [{ key: "therapy_goals", label: "Objetivos terapeuticos", type: "textarea", required: true, rows: 6 }],
+    },
+    behavioralObservationSection("V. Observacion conductual"),
+    {
+      id: "proceso",
+      title: "VI. Proceso psicologico",
+      fields: [{ key: "progress_summary", label: "Proceso psicologico", type: "textarea", required: true, rows: 8 }],
+    },
+    conclusionSection("VII. Conclusion"),
+    recommendationsSection("VIII. Recomendaciones"),
+    signatureSection("IX. Firma"),
+  ];
+}
+
+function getCoupleRegistroSections(): ReportSectionDefinition[] {
+  return [
+    ...baseIdentityFields(),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta de la pareja", type: "textarea", required: true, rows: 5 }],
+    },
+    {
+      id: "antecedente",
+      title: "III. Antecedente",
+      fields: [{ key: "background", label: "Antecedentes relevantes de la relacion", type: "textarea", rows: 5 }],
+    },
+    {
+      id: "objetivos",
+      title: "IV. Objetivos",
+      fields: [{ key: "therapy_goals", label: "Objetivos trabajados", type: "textarea", required: true, rows: 6 }],
+    },
+    behavioralObservationSection("V. Observacion conductual"),
+    {
+      id: "proceso",
+      title: "VI. Proceso psicologico",
+      fields: [{ key: "progress_summary", label: "Proceso psicologico de la pareja", type: "textarea", required: true, rows: 8 }],
+    },
+    conclusionSection("VII. Conclusion"),
+    recommendationsSection("VIII. Recomendaciones"),
+    signatureSection("IX. Firma"),
+  ];
+}
+
+function getFamilyRegistroSections(): ReportSectionDefinition[] {
+  return [
+    ...baseIdentityFields(),
+    {
+      id: "motivo",
+      title: "II. Motivo de consulta",
+      fields: [{ key: "consult_reason", label: "Motivo de consulta familiar", type: "textarea", required: true, rows: 5 }],
+    },
+    {
+      id: "antecedente",
+      title: "III. Antecedente",
+      fields: [{ key: "background", label: "Antecedentes relevantes de la familia", type: "textarea", rows: 5 }],
+    },
+    {
+      id: "objetivos",
+      title: "IV. Objetivos",
+      fields: [{ key: "therapy_goals", label: "Objetivos trabajados", type: "textarea", required: true, rows: 6 }],
+    },
+    behavioralObservationSection("V. Observacion conductual"),
+    {
+      id: "proceso",
+      title: "VI. Proceso psicologico",
+      fields: [{ key: "progress_summary", label: "Proceso psicologico familiar", type: "textarea", required: true, rows: 8 }],
+    },
+    conclusionSection("VII. Conclusion"),
+    recommendationsSection("VIII. Recomendaciones"),
+    signatureSection("IX. Firma"),
+  ];
+}
+
 function getChildProgressReportSections(): ReportSectionDefinition[] {
   return [
     {
@@ -651,37 +1031,32 @@ function getRegistrySections(): ReportSectionDefinition[] {
   ];
 }
 
+const REPORT_SECTION_MATRIX: Record<ReportKind, Record<PatientCategory, () => ReportSectionDefinition[]>> = {
+  historia_clinica: {
+    infantil: childAnamnesisSections,
+    adolescente: adolescentAnamnesisSections,
+    adulto: adultAnamnesisSections,
+    pareja: coupleAnamnesisSections,
+    familia: familyAnamnesisSections,
+  },
+  informe: {
+    infantil: getChildInformeSections,
+    adolescente: getAdolescentInformeSections,
+    adulto: getAdultInformeSections,
+    pareja: getCoupleInformeSections,
+    familia: getFamilyInformeSections,
+  },
+  registro: {
+    infantil: getChildProgressReportSections,
+    adolescente: getAdolescentRegistroSections,
+    adulto: getAdultRegistroSections,
+    pareja: getCoupleRegistroSections,
+    familia: getFamilyRegistroSections,
+  },
+};
+
 export function getReportSections(kind: ReportKind, category: PatientCategory): ReportSectionDefinition[] {
-  if (kind === "historia_clinica") {
-    switch (category) {
-      case "infantil":
-        return childAnamnesisSections();
-      case "adolescente":
-        return adolescentAnamnesisSections();
-      case "pareja":
-        return coupleAnamnesisSections();
-      case "familia":
-        return familyAnamnesisSections();
-      case "adulto":
-      default:
-        return adultAnamnesisSections();
-    }
-  }
-
-  if (kind === "registro") {
-    if (category === "infantil") {
-      return getChildProgressReportSections();
-    }
-    if (category === "adolescente") {
-      return getTherapeuticProgressSections(true);
-    }
-    if (category === "adulto") {
-      return getTherapeuticProgressSections(false);
-    }
-    return getRegistrySections();
-  }
-
-  return getStandardReportSections();
+  return REPORT_SECTION_MATRIX[kind][category]();
 }
 
 export function getRequiredFieldLabels(kind: ReportKind, category: PatientCategory) {

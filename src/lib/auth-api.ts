@@ -7,7 +7,8 @@ import { isValidEmail, isValidSpanishDni, normalizeDni, normalizeEmail, validate
 
 export const SESSION_COOKIE = "psyreport_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
-const SELF_REGISTRATION_ENABLED = process.env.ENABLE_SELF_REGISTRATION !== "false";
+const DEFAULT_DEMO_EMAIL = "demo@psyreport.es";
+const DEFAULT_DEMO_PASSWORD = "Demo1234";
 
 function shouldUseSecureCookies(request: NextRequest) {
   if (process.env.NODE_ENV !== "production") {
@@ -97,6 +98,34 @@ export async function loginFromRequest(emailRaw: string, password: string) {
   return { success: true, userId: user.id };
 }
 
+export async function ensureDemoUser() {
+  const email = normalizeEmail(process.env.NEXT_PUBLIC_DEMO_EMAIL || DEFAULT_DEMO_EMAIL);
+  const password = process.env.NEXT_PUBLIC_DEMO_PASSWORD || DEFAULT_DEMO_PASSWORD;
+
+  if (!email || !password) {
+    return { success: false as const, error: "La demo no esta configurada." };
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {
+      password: hashedPassword,
+      name: "Cuenta Demo",
+      role: "ADMIN",
+    },
+    create: {
+      email,
+      password: hashedPassword,
+      name: "Cuenta Demo",
+      role: "ADMIN",
+      dni: null,
+    },
+  });
+
+  return { success: true as const, email, password, userId: user.id };
+}
+
 export async function registerFromRequest(input: {
   name: string;
   email: string;
@@ -105,13 +134,6 @@ export async function registerFromRequest(input: {
   invitationToken?: string;
 }) {
   const invitationToken = (input.invitationToken || "").trim();
-
-  if (!SELF_REGISTRATION_ENABLED && !invitationToken) {
-    return {
-      success: false,
-      error: "El alta de nuevas cuentas esta desactivada. Contacta con la administracion del centro.",
-    };
-  }
 
   const name = input.name.trim();
   const email = normalizeEmail(input.email);

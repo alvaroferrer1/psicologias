@@ -139,6 +139,29 @@
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+.top-scrollbar {
+  scrollbar-color: #1967d2 #dbe3ef;
+  scrollbar-width: auto;
+}
+
+.top-scrollbar::-webkit-scrollbar {
+  height: 12px;
+}
+
+.top-scrollbar::-webkit-scrollbar-track {
+  background: #dbe3ef;
+  border-radius: 999px;
+}
+
+.top-scrollbar::-webkit-scrollbar-thumb {
+  background: #1967d2;
+  border-radius: 999px;
+}
+
+.top-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #0f52b5;
+}
+
 /* Privacy Mode */
 body.privacy-sensitive .sensitive-text {
   filter: blur(5px);

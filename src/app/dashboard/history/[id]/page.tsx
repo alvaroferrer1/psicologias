@@ -38,27 +38,40 @@ function renderFieldValue(field: ReportFieldDefinition, value: string | boolean 
 function getPdfCategoryDescriptor(category: PatientCategory) {
   switch (category) {
     case "infantil":
-      return "Nino";
+      return "Ninos";
     case "adolescente":
-      return "Juvenil";
+      return "Adolescentes";
     case "pareja":
-      return "Pareja";
+      return "Parejas";
     case "familia":
       return "Familia";
     case "adulto":
     default:
-      return "Adulto";
+      return "Adultos";
   }
 }
 
 function getPdfKindDescriptor(kind: ReportKind) {
-  if (kind === "historia_clinica") return "Historial";
+  if (kind === "historia_clinica") return "Historia clinica";
   if (kind === "registro") return "Reporte";
   return "Informe";
 }
 
 function getPdfCoverTitle(kind: ReportKind, category: PatientCategory) {
   return `${getPdfKindDescriptor(kind)} ${getPdfCategoryDescriptor(category)}`;
+}
+
+function renderPdfExportFieldValue(field: ReportFieldDefinition, value: string | boolean | undefined) {
+  if (!value) return null;
+  if (field.type === "image" && typeof value === "string") {
+    return <img src={value} alt={field.label} className="mt-4 max-h-52 w-auto rounded-2xl object-contain" />;
+  }
+
+  return (
+    <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 px-5 py-4">
+      <p className="whitespace-pre-wrap text-[14px] font-medium leading-7 text-slate-700">{String(value)}</p>
+    </div>
+  );
 }
 
 export default async function ReportDetailPage({
@@ -232,7 +245,7 @@ export default async function ReportDetailPage({
           <section className="min-h-[1123px] overflow-hidden bg-[#eef0f4] px-[54px] py-[46px]">
             <div className="flex h-full flex-col rounded-[34px] border border-slate-200/80 bg-[linear-gradient(180deg,#fdfdfd_0%,#f4f5f8_100%)] p-[34px] shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
               <div className="mx-auto h-2 w-40 rounded-full bg-slate-200">
-                <div className="h-full w-20 rounded-full bg-[linear-gradient(90deg,#5e95d8_0%,#88a6ee_55%,#d0c5f2_100%)]" />
+                <div className="h-full w-24 rounded-full bg-[linear-gradient(90deg,#3b82f6_0%,#06b6d4_55%,#34d399_100%)]" />
               </div>
 
               <div className="mt-10 flex items-start justify-between gap-8">
@@ -297,38 +310,26 @@ export default async function ReportDetailPage({
 
           <section className="min-h-[1123px] bg-white px-[54px] py-[46px]">
             <div className="space-y-8 rounded-[34px] border border-slate-200 bg-white p-[34px] shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-              <div className="overflow-hidden rounded-[28px] border border-blue-100 bg-white">
-                <div className="h-10 bg-gradient-to-r from-[#a7d3f5] via-[#d8d2ff] to-[#ffffff]" />
-                <div className="px-8 pb-8 pt-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 text-center">
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-700">Centro Psicologico Emotiva</p>
-                      <p className="mt-1 text-sm font-semibold italic text-slate-700">{EMOTIVA_LEGAL_NOTICE}</p>
-                    </div>
-                    <div className="w-[160px] shrink-0">
-                      <img src="/emotiva-dashboard-logo.jpeg" alt="Centro Psicologico Emotiva" className="h-auto w-full object-contain" />
-                    </div>
+              <header className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-8 py-8">
+                <div className="flex items-start justify-between gap-6">
+                  <div className="max-w-[470px]">
+                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Centro Psicologico Emotiva</p>
+                    <h2 className="mt-4 text-[30px] font-black uppercase leading-tight text-slate-900">{pdfCoverTitle}</h2>
+                    <p className="mt-3 text-[23px] font-black leading-tight text-slate-700">{patientLabel}</p>
+                    <p className="mt-4 text-[14px] font-semibold leading-7 text-slate-500">{report.title}</p>
                   </div>
-
-                  <div className="mt-8 text-center">
-                    <h2 className="text-4xl font-black tracking-tight text-slate-900">{heading}</h2>
-                    <p className="mt-3 text-sm font-semibold text-slate-500">{report.title}</p>
-                    <p className="mt-1 text-sm font-medium text-slate-400">
-                      Actualizado: {new Date(report.updatedAt).toLocaleString("es-ES")}
+                  <div className="text-right">
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Fecha</p>
+                    <p className="mt-2 text-[15px] font-bold text-slate-700">
+                      {new Date(report.updatedAt).toLocaleDateString("es-ES")}
                     </p>
+                    <p className="mt-6 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Documento</p>
+                    <p className="mt-2 text-[15px] font-bold text-slate-700">{getPdfKindDescriptor(reportKind)}</p>
+                    <p className="mt-6 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Grupo</p>
+                    <p className="mt-2 text-[15px] font-bold text-slate-700">{getPdfCategoryDescriptor(patientCategory)}</p>
                   </div>
-
-                  {report.versions.length > 0 && (
-                    <div className="mt-6 flex flex-wrap justify-center gap-2">
-                      {report.versions.map((version) => (
-                        <span key={version.id} className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-slate-500">
-                          V{version.version} - {new Date(version.createdAt).toLocaleDateString("es-ES")}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </div>
+              </header>
 
               {sections.map((section) => {
                 const visibleFields = section.fields.filter((field) => {
@@ -339,16 +340,21 @@ export default async function ReportDetailPage({
                 if (visibleFields.length === 0) return null;
 
                 return (
-                  <section key={`pdf-${section.id}`} className="space-y-4">
-                    <h3 className="text-lg font-extrabold text-secondary-text">{section.title}</h3>
-                    <div className="grid gap-4 md:grid-cols-2">
+                  <section key={`pdf-${section.id}`} className="break-inside-avoid space-y-4">
+                    <div className="border-b border-slate-200 pb-3">
+                      <h3 className="text-[22px] font-black text-slate-900">{section.title}</h3>
+                      {section.description && (
+                        <p className="mt-2 text-[13px] font-medium leading-6 text-slate-500">{section.description}</p>
+                      )}
+                    </div>
+                    <div className="space-y-4">
                       {visibleFields.map((field) => (
                         <div
                           key={`pdf-${section.id}-${field.key}`}
-                          className={`rounded-2xl border border-slate-100 bg-slate-50 p-4 ${field.type === "textarea" || field.type === "image" ? "md:col-span-2" : ""}`}
+                          className="break-inside-avoid rounded-[24px] border border-slate-200 bg-white px-5 py-5"
                         >
-                          <p className="text-xs font-black uppercase tracking-wider text-slate-400">{field.label}</p>
-                          {renderFieldValue(field, fields[field.key])}
+                          <p className="text-[12px] font-black uppercase tracking-[0.16em] text-slate-500">{field.label}</p>
+                          {renderPdfExportFieldValue(field, fields[field.key])}
                         </div>
                       ))}
                     </div>
@@ -356,27 +362,27 @@ export default async function ReportDetailPage({
                 );
               })}
 
-              <section className="rounded-[28px] border border-slate-200 bg-white p-6">
-                <h3 className="text-lg font-extrabold text-secondary-text">Firma y sello</h3>
+              <section className="break-inside-avoid rounded-[28px] border border-slate-200 bg-white p-6">
+                <h3 className="text-[22px] font-black text-slate-900">Firma y sello</h3>
                 <div className="mt-5 grid gap-6 md:grid-cols-2">
                   <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">Psicologa evaluadora</p>
-                    <p className="mt-2 text-sm font-bold text-secondary-text">{resolvedSignatureName || "Pendiente de firma"}</p>
+                    <p className="text-[12px] font-black uppercase tracking-[0.16em] text-slate-500">Psicologa evaluadora</p>
+                    <p className="mt-2 text-[15px] font-bold text-slate-800">{resolvedSignatureName || "Pendiente de firma"}</p>
                     {resolvedSignatureImage ? (
                       <img src={resolvedSignatureImage} alt="Firma" className="mt-4 max-h-32 w-auto object-contain" />
                     ) : (
                       <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-400">
-                        Si no hay firma digital subida, imprime el documento y firma manualmente.
+                        Firma digital no disponible.
                       </div>
                     )}
                   </div>
                   <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-wider text-slate-400">Sello institucional</p>
+                    <p className="text-[12px] font-black uppercase tracking-[0.16em] text-slate-500">Sello institucional</p>
                     {resolvedStampImage ? (
                       <img src={resolvedStampImage} alt="Sello institucional" className="mt-4 max-h-32 w-auto object-contain" />
                     ) : (
                       <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-400">
-                        Si no hay sello digital subido, imprime el documento y sella manualmente.
+                        Sello digital no disponible.
                       </div>
                     )}
                   </div>

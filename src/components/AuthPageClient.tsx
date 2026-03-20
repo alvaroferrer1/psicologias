@@ -19,9 +19,9 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function AuthPageClient() {
-  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "";
-  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "";
-  const hasDemoAccess = Boolean(demoEmail && demoPassword);
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "demo@psyreport.es";
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "Demo1234";
+  const hasDemoAccess = true;
 
   const [mode, setMode] = useState<"login" | "register">("login");
   const [isForgot, setIsForgot] = useState(false);

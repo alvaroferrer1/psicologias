@@ -65,13 +65,8 @@ export function SyncedHorizontalScroll({ children }: { children: React.ReactNode
   return (
     <div>
       <div className="border-b border-secondary-border bg-slate-50/70 px-4 py-3">
-        <div ref={topRef} className="overflow-x-auto pb-1">
-          <div
-            className="h-4 rounded-full bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200"
-            style={{ width: scrollWidth || clientWidth || "100%", minWidth: "100%" }}
-          >
-            <div className="h-full min-w-full rounded-full opacity-0" />
-          </div>
+        <div ref={topRef} className="top-scrollbar overflow-x-auto">
+          <div style={{ width: scrollWidth || clientWidth || "100%", minWidth: "100%", height: 1 }} />
         </div>
       </div>
       <div ref={bottomRef} className="overflow-x-auto">
