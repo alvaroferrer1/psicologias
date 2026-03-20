@@ -128,6 +128,22 @@ export default async function ReportDetailPage({
   const heading = getPdfDocumentHeading(reportKind);
   const pdfCoverTitle = getPdfCoverTitle(reportKind, patientCategory);
   const patientLabel = report.patient?.name || "Paciente sin asignar";
+  const pdfSections = sections
+    .map((section) => ({
+      title: section.title,
+      description: section.description,
+      fields: section.fields
+        .filter((field) => {
+          const value = fields[field.key];
+          return value !== undefined && value !== null && value !== "";
+        })
+        .map((field) => ({
+          label: field.label,
+          type: field.type,
+          value: fields[field.key],
+        })),
+    }))
+    .filter((section) => section.fields.length > 0);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -148,7 +164,21 @@ export default async function ReportDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
-          <ReportPdfButton targetId="report-pdf-export" filename={pdfFilename} buttonId="report-download-pdf" />
+          <ReportPdfButton
+            filename={pdfFilename}
+            buttonId="report-download-pdf"
+            title={pdfCoverTitle}
+            reportTitle={report.title}
+            patientName={patientLabel}
+            documentType={getPdfKindDescriptor(reportKind)}
+            groupLabel={getPdfCategoryDescriptor(patientCategory)}
+            legalNotice={EMOTIVA_LEGAL_NOTICE}
+            updatedAt={new Date(report.updatedAt).toLocaleString("es-ES")}
+            sections={pdfSections}
+            signatureName={resolvedSignatureName || "Pendiente de firma"}
+            signatureImage={resolvedSignatureImage}
+            stampImage={resolvedStampImage}
+          />
           <Link href={`/dashboard/new-report/editor?id=${report.id}`} className="btn btn-secondary">
             <Edit3 className="h-4 w-4" /> Editar
           </Link>
