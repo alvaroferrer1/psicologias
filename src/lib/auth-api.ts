@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import type { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { logAudit } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 import { isValidEmail, isValidSpanishDni, normalizeDni, normalizeEmail, validatePasswordStrength } from "@/lib/validators";
 
 export const SESSION_COOKIE = "psyreport_session";
@@ -140,6 +140,14 @@ export async function registerFromRequest(input: {
   if (existingUser) {
     await logAudit({ action: "register.duplicate_email", entityType: "user", metadata: { email } });
     return { success: false, error: "Este email ya esta registrado." };
+  }
+
+  if (dni) {
+    const existingDniUser = await prisma.user.findFirst({ where: { dni } });
+    if (existingDniUser) {
+      await logAudit({ action: "register.duplicate_dni", entityType: "user", metadata: { dni } });
+      return { success: false, error: "Este DNI profesional ya esta registrado." };
+    }
   }
 
   if (invitationToken) {

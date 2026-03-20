@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
-import { Prisma } from "@prisma/client";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { canEditRole, isAdminRole } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 
 const SESSION_COOKIE = "psyreport_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
@@ -157,30 +157,4 @@ export async function requireAdminUser() {
   return user;
 }
 
-export async function logAudit({
-  userId,
-  action,
-  entityType,
-  entityId,
-  metadata,
-}: {
-  userId?: string | null;
-  action: string;
-  entityType: string;
-  entityId?: string | null;
-  metadata?: Prisma.InputJsonValue;
-}) {
-  try {
-    await prisma.auditLog.create({
-      data: {
-        userId: userId || null,
-        action,
-        entityType,
-        entityId: entityId || null,
-        metadata: metadata || undefined,
-      },
-    });
-  } catch (error) {
-    console.error("Audit log error:", error);
-  }
-}
+export { logAudit };

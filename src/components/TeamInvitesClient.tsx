@@ -10,6 +10,7 @@ type UserItem = {
   id: string;
   name: string;
   email: string;
+  dni?: string | null;
   role: string;
   createdAt: string;
 };
@@ -109,6 +110,7 @@ export function TeamInvitesClient({ users, invitations }: { users: UserItem[]; i
                   <div>
                     <p className="font-bold text-secondary-text">{user.name}</p>
                     <p className="text-sm text-slate-500">{user.email}</p>
+                    {user.dni && <p className="text-xs text-slate-400">DNI: {user.dni}</p>}
                   </div>
                   <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-blue-700">
                     {getRoleLabel(user.role)}

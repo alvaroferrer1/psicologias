@@ -330,7 +330,7 @@ export default function AuthPageClient() {
                     <input
                       type={showRegisterPwd ? "text" : "password"}
                       className="inp pl-10 pr-10"
-                      placeholder="Minimo 8 caracteres, mayuscula y numero"
+                      placeholder="Minimo 10 caracteres, mayuscula, numero y simbolo"
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
                       required

@@ -12,12 +12,22 @@ export function isValidEmail(value: string) {
 
 export function isValidSpanishDni(value: string) {
   if (!value) return true;
-  return /^[0-9XYZ][0-9]{7}[A-Z]$/.test(value);
+  const normalized = normalizeDni(value);
+  if (!/^[0-9XYZ][0-9]{7}[A-Z]$/.test(normalized)) {
+    return false;
+  }
+
+  const letters = "TRWAGMYFPDXBNJZSQVHLCKE";
+  const prefix = normalized[0];
+  const numericPrefix = prefix === "X" ? "0" : prefix === "Y" ? "1" : prefix === "Z" ? "2" : prefix;
+  const number = Number(`${numericPrefix}${normalized.slice(1, 8)}`);
+
+  return letters[number % 23] === normalized[8];
 }
 
 export function validatePasswordStrength(password: string) {
-  if (password.length < 8) {
-    return "La contrasena debe tener al menos 8 caracteres.";
+  if (password.length < 10) {
+    return "La contrasena debe tener al menos 10 caracteres.";
   }
   if (!/[A-Z]/.test(password)) {
     return "La contrasena debe incluir al menos una mayuscula.";
@@ -27,6 +37,9 @@ export function validatePasswordStrength(password: string) {
   }
   if (!/[0-9]/.test(password)) {
     return "La contrasena debe incluir al menos un numero.";
+  }
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return "La contrasena debe incluir al menos un simbolo.";
   }
   return null;
 }

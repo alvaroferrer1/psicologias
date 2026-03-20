@@ -10,6 +10,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { ExportButton } from "@/components/ExportButton";
+import { SyncedHorizontalScroll } from "@/components/SyncedHorizontalScroll";
 import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPatientCategoryLabel, getReportKindLabel } from "@/lib/report-templates";
@@ -146,12 +147,7 @@ export default async function HistoryPage({
       </div>
 
       <div className="card overflow-hidden">
-        <div className="border-b border-secondary-border bg-slate-50/70 px-4 py-3">
-          <div className="mx-auto h-1.5 w-40 overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full w-24 rounded-full bg-gradient-to-r from-primary via-blue-400 to-violet-300" />
-          </div>
-        </div>
-        <div className="overflow-x-auto">
+        <SyncedHorizontalScroll>
           <table className="w-full whitespace-nowrap text-left text-sm">
             <thead className="border-b border-secondary-border bg-slate-50/50 font-bold text-slate-500">
               <tr>
@@ -247,13 +243,6 @@ export default async function HistoryPage({
                         <Link prefetch={false} href={`/dashboard/history/${report.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-[12px] font-bold text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800">
                           Ver
                         </Link>
-                        <Link
-                          prefetch={false}
-                          href={`/dashboard/history/${report.id}?download=1`}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-[12px] font-bold text-primary transition-colors hover:border-primary/20 hover:bg-primary-light"
-                        >
-                          PDF
-                        </Link>
                         {(isBorrador || isReview) && (
                           <Link prefetch={false} href={`/dashboard/new-report/editor?id=${report.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-transparent px-3 py-1.5 text-[12px] font-bold text-primary transition-colors hover:border-primary/20 hover:bg-primary-light">
                             <Edit3 className="h-3.5 w-3.5" /> Continuar
@@ -266,7 +255,7 @@ export default async function HistoryPage({
               })}
             </tbody>
           </table>
-        </div>
+        </SyncedHorizontalScroll>
       </div>
     </div>
   );

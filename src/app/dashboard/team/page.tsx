@@ -17,6 +17,7 @@ export default async function TeamPage() {
       id: true,
       name: true,
       email: true,
+      dni: true,
       role: true,
       createdAt: true,
       lockedUntil: true,

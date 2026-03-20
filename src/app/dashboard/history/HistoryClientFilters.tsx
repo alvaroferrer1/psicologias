@@ -61,8 +61,9 @@ export default function HistoryClientFilters({
 
   return (
     <div className="card p-4">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-        <div className="relative flex-1">
+      <div className="overflow-x-auto pb-2">
+        <div className="flex min-w-max items-center gap-3">
+          <div className="relative w-[340px] shrink-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
@@ -72,9 +73,8 @@ export default function HistoryClientFilters({
             placeholder="Buscar por paciente o documento..."
             aria-label="Buscar informes"
           />
-        </div>
+          </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <div className="relative min-w-[180px]">
             <SlidersHorizontal className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <select
