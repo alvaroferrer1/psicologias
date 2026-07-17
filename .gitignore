@@ -1,0 +1,48 @@
+# Dependencias
+node_modules/
+
+# Builds
+.next/
+.vercel/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+*.log
+dev.log
+dev.err.log
+start.log
+start.err.log
+
+# Entorno / secretos
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Carpetas y archivos duplicados / backups / mirrors
+proyecto/
+psicologias_github/
+psicologias_github_fixed/
+psicologias_main_zip_src/
+psyreport-next-lastcommit/
+psyreport-next_BUENO_source/
+vercel_psicologias_emotiva_mirror_20260713_195547/
+EMOTIVA_BRAND_ASSETS/
+PDF_DOC_INFO/
+a/
+.agents/
+.kilo/
+codigo_vercel_main.zip
+EMOTIVA_BRAND_ASSETS.zip
+psicologias-main(1).zip
+psyreport-next_BUENO_source.zip
+psyreport_v2.html
+rama_pruebas_generacion_pdf.zip
+vercel_psicologias_emotiva_mirror_20260713_195547.zip

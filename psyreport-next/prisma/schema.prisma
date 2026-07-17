@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String
+  name                String
+  role                String               @default("USER")
+  colegiado           String?
+  dni                 String?
+  phone               String?
+  address             String?
+  bio                 String?
+  specialization      String?
+  avatarUrl           String?
+  signatureDataUrl    String?
+  stampDataUrl        String?
+  failedLoginAttempts Int                  @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime             @default(now())
+  sessions            Session[]
+  patients            Patient[]
+  reports             Report[]
+  appointments        Appointment[]
+  auditLogs           AuditLog[]
+  passwordResetTokens PasswordResetToken[]
+  reportVersions      ReportVersion[]
+  patientNotes        PatientNote[]
+  patientDocuments    PatientDocument[]
+  consentRecords      ConsentRecord[]
+  sentInvitations     Invitation[]         @relation("InvitationSentBy")
+  compactMode         Boolean              @default(false)
+  remindersEnabled    Boolean              @default(true)
+  exportJsonByDefault Boolean              @default(true)
+  privacyMode         Boolean              @default(false)
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  sessionToken String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip           String?
+  userAgent    String?
+  lastSeenAt   DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([sessionToken])
+}
+
+model Patient {
+  id              String        @id @default(uuid())
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  email           String?
+  phone           String?
+  dni             String?
+  birthDate       DateTime?
+  address         String?
+  patientType     String        @default("adulto")
+  status          String        @default("activo")
+  guardianName    String?
+  guardianDni     String?
+  guardianPhone   String?
+  guardianEmail   String?
+  clinicalAlerts  String?
+  active          Boolean       @default(true)
+  color           String        @default("bg-blue-500")
+  deletedAt       DateTime?
+  deletedByUserId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  reports         Report[]
+  appointments    Appointment[]
+  notes           PatientNote[]
+  documents       PatientDocument[]
+  consents        ConsentRecord[]
+
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model Report {
+  id              String        @id @default(uuid())
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  type            String        @default("General")
+  reportKind      String        @default("informe")
+  patientCategory String        @default("adulto")
+  status          String        @default("Borrador")
+  content         String?
+  patientId       String
+  patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  deletedAt       DateTime?
+  deletedByUserId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  versions        ReportVersion[]
+
+  @@index([userId])
+  @@index([patientId])
+  @@index([deletedAt])
+  @@index([reportKind, patientCategory])
+}
+
+model Appointment {
+  id              String        @id @default(uuid())
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  date            DateTime
+  type            String        @default("Presencial")
+  status          String        @default("programada")
+  notes           String?
+  patientId       String
+  patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  meetingUrl      String?
+  roomName        String?
+  roomPassword    String?
+  provider        String?
+  startedAt       DateTime?
+  endedAt         DateTime?
+  deletedAt       DateTime?
+  deletedByUserId String?
+  createdAt       DateTime      @default(now())
+
+  @@index([userId])
+  @@index([patientId])
+  @@index([date])
+  @@index([deletedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model ReportVersion {
+  id               String   @id @default(uuid())
+  reportId         String
+  report           Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  version          Int
+  title            String
+  type             String
+  status           String
+  content          String?
+  createdByUserId  String?
+  createdByUser    User?    @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
+
+  @@unique([reportId, version])
+  @@index([reportId, createdAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PatientNote {
+  id          String   @id @default(uuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  title       String
+  content     String
+  sessionDate DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([patientId, createdAt])
+  @@index([userId])
+}
+
+model PatientDocument {
+  id           String   @id @default(uuid())
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  title        String
+  documentType String
+  url          String?
+  storagePath  String?
+  fileName     String?
+  mimeType     String?
+  sizeBytes    Int?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  @@index([patientId, createdAt])
+  @@index([userId])
+}
+
+model Invitation {
+  id              String   @id @default(uuid())
+  email           String
+  role            String   @default("PSYCHOLOGIST")
+  token           String   @unique
+  invitedByUserId String?
+  invitedByUser   User?    @relation("InvitationSentBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([email, acceptedAt])
+  @@index([token])
+}
+
+model ConsentRecord {
+  id          String   @id @default(uuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  consentType String
+  status      String   @default("pendiente")
+  signedAt    DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([patientId, createdAt])
+  @@index([userId])
+}
