@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useT } from "@/lib/useT";
 
 type Props = {
   currentQ?: string;
@@ -17,6 +18,7 @@ export default function HistoryClientFilters({
   currentKind = "",
   currentStatus = "",
 }: Props) {
+  const { t } = useT();
   const pathname = usePathname();
   const [query, setQuery] = useState(currentQ);
   const [category, setCategory] = useState(currentCategory);
@@ -70,8 +72,8 @@ export default function HistoryClientFilters({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             className="inp pl-9"
-            placeholder="Buscar por paciente o documento..."
-            aria-label="Buscar informes"
+            placeholder={t("Buscar informes...")}
+            aria-label={t("Buscar")}
           />
           </div>
 
@@ -84,15 +86,15 @@ export default function HistoryClientFilters({
                 setCategory(value);
                 navigateNow({ q: query, category: value, kind, status });
               }}
-              className="inp appearance-none pl-9"
-              aria-label="Filtrar por categoria de paciente"
+              className="inp pl-9"
+              aria-label={t("Filtrar por categoría")}
             >
-              <option value="">Todos los pacientes</option>
-              <option value="infantil">Ninos</option>
-              <option value="adolescente">Adolescentes</option>
-              <option value="adulto">Adultos</option>
-              <option value="pareja">Parejas</option>
-              <option value="familia">Familia</option>
+              <option value="">{t("Todas las categorías")}</option>
+              <option value="infantil">{t("Infantil")}</option>
+              <option value="adolescente">{t("Adolescente")}</option>
+              <option value="adulto">{t("Adulto")}</option>
+              <option value="pareja">{t("Pareja")}</option>
+              <option value="familia">{t("Familia")}</option>
             </select>
           </div>
 
@@ -104,12 +106,12 @@ export default function HistoryClientFilters({
               navigateNow({ q: query, category, kind: value, status });
             }}
             className="inp min-w-[180px]"
-            aria-label="Filtrar por tipo de documento"
-          >
-            <option value="">Todos los documentos</option>
-            <option value="historia_clinica">Historia clinica</option>
-            <option value="informe">Informe</option>
-            <option value="registro">Reporte</option>
+              aria-label={t("Filtrar por tipo")}
+            >
+              <option value="">{t("Todos los tipos")}</option>
+              <option value="historia_clinica">{t("Historia clínica")}</option>
+              <option value="informe">{t("Informe")}</option>
+              <option value="registro">{t("Registro")}</option>
           </select>
 
           <select
@@ -120,17 +122,17 @@ export default function HistoryClientFilters({
               navigateNow({ q: query, category, kind, status: value });
             }}
             className="inp min-w-[170px]"
-            aria-label="Filtrar por estado"
-          >
-            <option value="">Todos los estados</option>
-            <option value="Borrador">Borrador</option>
-            <option value="En revision">En revision</option>
-            <option value="Completado">Completado</option>
-            <option value="Finalizado">Finalizado</option>
+              aria-label={t("Filtrar por estado")}
+            >
+              <option value="">{t("Todos los estados")}</option>
+              <option value="Borrador">{t("Borrador")}</option>
+              <option value="En revisiÃ³n">{t("En revisión")}</option>
+              <option value="Completado">{t("Completado")}</option>
+              <option value="Finalizado">{t("Finalizado")}</option>
           </select>
 
           <button type="button" onClick={resetFilters} className="btn btn-ghost whitespace-nowrap">
-            <X className="h-4 w-4" /> Limpiar filtros
+            <X className="h-4 w-4" /> {t("Limpiar filtros")}
           </button>
         </div>
       </div>

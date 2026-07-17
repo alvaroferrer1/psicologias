@@ -5,10 +5,11 @@ import type { ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, FilePlus2, FolderOpen, History, Home, LogOut, Menu, Settings, Trash2, Users, UserRoundPlus, Video, X } from "lucide-react";
+import { CalendarDays, FilePlus2, FileSignature, FolderOpen, History, HelpCircle, Home, LogOut, Menu, Settings, Trash2, Users, UserRoundPlus, Video, X } from "lucide-react";
 import { logoutUser } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import { getRoleLabel, isAdminRole } from "@/lib/permissions";
+import { useT } from "@/lib/useT";
 
 type SidebarUser = {
   name?: string | null;
@@ -17,6 +18,7 @@ type SidebarUser = {
 
 export default function Sidebar({ user }: { user?: SidebarUser | null }) {
   const pathname = usePathname();
+  const { t } = useT();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -43,23 +45,24 @@ export default function Sidebar({ user }: { user?: SidebarUser | null }) {
       .join("") || "U";
 
   const navLinks = [
-    { name: "Inicio", href: "/dashboard", icon: Home },
-    { name: "Pacientes", href: "/dashboard/patients", icon: Users },
-    { name: "Informes", href: "/dashboard/history", icon: FolderOpen },
-    { name: "Nuevo informe", href: "/dashboard/new-report", icon: FilePlus2 },
-    { name: "Calendario", href: "/dashboard/calendar", icon: CalendarDays },
+    { name: t("nav.home"), href: "/dashboard", icon: Home },
+    { name: t("nav.patients"), href: "/dashboard/patients", icon: Users },
+    { name: t("nav.reports"), href: "/dashboard/history", icon: FolderOpen },
+    { name: t("nav.newReport"), href: "/dashboard/new-report", icon: FilePlus2 },
+    { name: t("nav.calendar"), href: "/dashboard/calendar", icon: CalendarDays },
   ];
 
-  const extraLinks = [{ name: "Videoconsulta", href: "/dashboard/video", icon: Video }];
+  const extraLinks = [{ name: t("nav.video"), href: "/dashboard/video", icon: Video }];
 
   const clinicLinks = [
-    { name: "Configuracion", href: "/dashboard/settings", icon: Settings },
-    { name: "Papelera", href: "/dashboard/trash", icon: Trash2 },
+    { name: t("nav.consents"), href: "/dashboard/consents", icon: FileSignature },
+    { name: t("nav.settings"), href: "/dashboard/settings", icon: Settings },
+    { name: t("nav.trash"), href: "/dashboard/trash", icon: Trash2 },
   ];
 
   const adminLinks = [
-    { name: "Equipo", href: "/dashboard/team", icon: UserRoundPlus },
-    { name: "Auditoria", href: "/dashboard/audit", icon: History },
+    { name: t("nav.team"), href: "/dashboard/team", icon: UserRoundPlus },
+    { name: t("nav.audit"), href: "/dashboard/audit", icon: History },
   ];
 
   const renderLink = (link: { name: string; href: string; icon: ComponentType<{ className?: string }> }) => {
@@ -110,12 +113,12 @@ export default function Sidebar({ user }: { user?: SidebarUser | null }) {
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={cn("hidden shrink-0 text-slate-400 hover:text-slate-600 lg:flex", isCollapsed && "absolute -right-3 top-1/2 z-50 -translate-y-1/2 rounded-full border border-slate-200 bg-white p-1 shadow-sm")}
             type="button"
-            aria-label="Contraer menu"
+            aria-label={t("nav.collapse")}
           >
             <Menu className={cn("h-5 w-5", isCollapsed && "h-4 w-4 text-primary")} />
           </button>
 
-          <button onClick={() => setIsOpen(false)} className={cn("shrink-0 text-slate-400 hover:text-slate-600 lg:hidden", isCollapsed && "hidden")} type="button" aria-label="Cerrar menu">
+          <button onClick={() => setIsOpen(false)} className={cn("shrink-0 text-slate-400 hover:text-slate-600 lg:hidden", isCollapsed && "hidden")} type="button" aria-label={t("nav.closeMenu")}>
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -124,14 +127,14 @@ export default function Sidebar({ user }: { user?: SidebarUser | null }) {
           {navLinks.map(renderLink)}
 
           <div className={cn("pt-4 pb-2", isCollapsed ? "px-0 text-center" : "px-2")}>
-            <span className={cn("text-[10px] font-bold uppercase tracking-widest text-slate-400", isCollapsed && "hidden")}>Servicios</span>
+            <span className={cn("text-[10px] font-bold uppercase tracking-widest text-slate-400", isCollapsed && "hidden")}>{t("nav.services")}</span>
             {isCollapsed && <div className="mx-auto h-[1px] w-6 bg-slate-200" />}
           </div>
 
           {extraLinks.map(renderLink)}
 
           <div className={cn("pt-4 pb-2", isCollapsed ? "px-0 text-center" : "px-2")}>
-            <span className={cn("text-[10px] font-bold uppercase tracking-widest text-slate-400", isCollapsed && "hidden")}>Clinica</span>
+            <span className={cn("text-[10px] font-bold uppercase tracking-widest text-slate-400", isCollapsed && "hidden")}>{t("nav.clinic")}</span>
             {isCollapsed && <div className="mx-auto h-[1px] w-6 bg-slate-200" />}
           </div>
 
@@ -167,7 +170,7 @@ export default function Sidebar({ user }: { user?: SidebarUser | null }) {
             type="button"
           >
             <LogOut className="h-4 w-4 transition-all" />
-            {!isCollapsed && (isLoggingOut ? "Cerrando..." : "Cerrar sesion")}
+            {!isCollapsed && (isLoggingOut ? t("nav.loggingOut") : t("nav.logout"))}
           </button>
         </div>
       </aside>

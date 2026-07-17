@@ -1,25 +1,29 @@
+"use client";
+
 import { Activity, Database, ShieldCheck, Trash2 } from "lucide-react";
+import { useT } from "@/lib/useT";
 
 export function SettingsInfoCards() {
+  const { t } = useT();
   const cards = [
     {
-      title: "Papelera clinica",
-      description: "Archiva pacientes sin borrar su expediente y restauralos despues desde la papelera.",
+      title: "Papelera",
+      description: "Recupera o elimina definitivamente pacientes y documentos.",
       icon: Trash2,
     },
     {
-      title: "Seguridad activa",
-      description: "Las sesiones son persistentes y puedes cerrarlas desde este panel cuando necesites.",
+      title: "Seguridad",
+      description: "Revisa contraseñas, sesiones y accesos.",
       icon: ShieldCheck,
     },
     {
-      title: "Estado del sistema",
-      description: "La app dispone de endpoint de salud y trazabilidad de actividad en base de datos.",
+      title: "Actividad",
+      description: "Consulta el registro de auditoría.",
       icon: Activity,
     },
     {
-      title: "Datos estructurados",
-      description: "Informes versionados, consentimientos, notas y documentos ya forman parte del expediente.",
+      title: "Base de datos",
+      description: "Estado y mantenimiento de la información.",
       icon: Database,
     },
   ];

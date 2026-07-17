@@ -1,14 +1,17 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { CalendarDays, FileText, Search, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/auth";
+import { getServerT } from "@/lib/i18n-server";
 
 export default async function SearchPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  const { t, lang } = await getServerT();
   const user = await requireCurrentUser();
+  const locale = lang === "en" ? "en-US" : "es-ES";
   const resolvedSearchParams = await searchParams;
   const query = resolvedSearchParams.q?.trim() || "";
   const ownershipFilter = [{ userId: user.id }, { userId: null }];
@@ -81,9 +84,9 @@ export default async function SearchPage({
             <Search className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">Busqueda global</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">{t("Resultados de búsqueda")}</h1>
             <p className="mt-1 text-sm font-medium text-slate-500">
-              {query ? `Resultados para "${query}"` : "Usa la barra superior para buscar pacientes, informes y citas."}
+              {query ? `${t("Resultados para")} "${query}"` : t("Sin resultados")}
             </p>
           </div>
         </div>
@@ -92,15 +95,15 @@ export default async function SearchPage({
       {query && (
         <div className="grid gap-4 md:grid-cols-3">
           <div className="card p-5">
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Pacientes</p>
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Pacientes")}</p>
             <p className="mt-2 text-3xl font-black text-secondary-text">{patients.length}</p>
           </div>
           <div className="card p-5">
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Informes</p>
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Informes")}</p>
             <p className="mt-2 text-3xl font-black text-secondary-text">{reports.length}</p>
           </div>
           <div className="card p-5">
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Citas</p>
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Citas")}</p>
             <p className="mt-2 text-3xl font-black text-secondary-text">{appointments.length}</p>
           </div>
         </div>
@@ -108,8 +111,8 @@ export default async function SearchPage({
 
       {query && totalResults === 0 && (
         <div className="card p-10 text-center">
-          <p className="text-lg font-bold text-secondary-text">No se encontraron resultados</p>
-          <p className="mt-2 text-sm text-slate-500">Prueba con otro nombre, tipo de informe, email, telefono o modalidad.</p>
+          <p className="text-lg font-bold text-secondary-text">{t("Sin coincidencias")}</p>
+          <p className="mt-2 text-sm text-slate-500">{t("No encontramos resultados para tu búsqueda.")}</p>
         </div>
       )}
 
@@ -117,7 +120,7 @@ export default async function SearchPage({
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-extrabold text-secondary-text">Pacientes</h2>
+            <h2 className="text-lg font-extrabold text-secondary-text">{t("Pacientes")}</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {patients.map((patient) => (
@@ -128,7 +131,7 @@ export default async function SearchPage({
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-bold text-secondary-text">{patient.name}</p>
-                    <p className="truncate text-sm text-slate-500">{patient.description || "Paciente"}</p>
+                    <p className="truncate text-sm text-slate-500">{patient.description || t("Sin descripción")}</p>
                   </div>
                 </div>
               </Link>
@@ -141,7 +144,7 @@ export default async function SearchPage({
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-extrabold text-secondary-text">Informes</h2>
+            <h2 className="text-lg font-extrabold text-secondary-text">{t("Informes")}</h2>
           </div>
           <div className="card overflow-hidden">
             <div className="divide-y divide-slate-100">
@@ -149,7 +152,7 @@ export default async function SearchPage({
                 <Link key={report.id} href={`/dashboard/history/${report.id}`} className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-slate-50">
                   <div className="min-w-0">
                     <p className="truncate font-bold text-secondary-text">{report.title}</p>
-                    <p className="truncate text-sm text-slate-500">{report.patient?.name || "Paciente sin asignar"}</p>
+                    <p className="truncate text-sm text-slate-500">{report.patient?.name || t("Paciente sin asignar")}</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-slate-500">
                     {report.status}
@@ -165,7 +168,7 @@ export default async function SearchPage({
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-extrabold text-secondary-text">Citas</h2>
+            <h2 className="text-lg font-extrabold text-secondary-text">{t("Citas")}</h2>
           </div>
           <div className="card overflow-hidden">
             <div className="divide-y divide-slate-100">
@@ -174,7 +177,7 @@ export default async function SearchPage({
                   <div className="min-w-0">
                     <p className="truncate font-bold text-secondary-text">{appointment.title}</p>
                     <p className="truncate text-sm text-slate-500">
-                      {appointment.patient?.name || "Paciente"} · {new Date(appointment.date).toLocaleString("es-ES")}
+                      {appointment.patient?.name || t("Sin descripción")} Â· {new Date(appointment.date).toLocaleString(locale)}
                     </p>
                   </div>
                   <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-black uppercase tracking-wider text-primary">

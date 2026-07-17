@@ -5,6 +5,7 @@ import Link from "next/link";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { restorePatient } from "@/app/actions/patients";
 import { useToast } from "@/components/ToastProvider";
+import { useT } from "@/lib/useT";
 
 type ArchivedPatient = {
   id: string;
@@ -14,6 +15,8 @@ type ArchivedPatient = {
 };
 
 export function TrashPatientsClient({ patients }: { patients: ArchivedPatient[] }) {
+  const { t, lang } = useT();
+  const locale = lang === "en" ? "en-US" : "es-ES";
   const { toast } = useToast();
   const [items, setItems] = useState(patients);
   const [isPending, startTransition] = useTransition();
@@ -31,7 +34,7 @@ export function TrashPatientsClient({ patients }: { patients: ArchivedPatient[] 
   };
 
   if (items.length === 0) {
-    return <div className="card p-10 text-center text-sm font-medium text-slate-500">La papelera esta vacia.</div>;
+    return <div className="card p-10 text-center text-sm font-medium text-slate-500">{"La papelera está vacía."}</div>;
   }
 
   return (
@@ -43,17 +46,17 @@ export function TrashPatientsClient({ patients }: { patients: ArchivedPatient[] 
               <Trash2 className="h-4 w-4 text-red-500" />
               <p className="truncate font-bold text-secondary-text">{patient.name}</p>
             </div>
-            <p className="mt-1 text-sm text-slate-500">{patient.description || "Paciente archivado"}</p>
+            <p className="mt-1 text-sm text-slate-500">{patient.description || "Sin descripción"}</p>
             <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Archivado: {new Date(patient.deletedAt).toLocaleString("es-ES")}
+              {"Eliminado el"} {new Date(patient.deletedAt).toLocaleString(locale)}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/dashboard/patients/${patient.id}/history`} className="btn btn-secondary">
-              Abrir expediente
+              {"Ver historial"}
             </Link>
             <button type="button" onClick={() => handleRestore(patient.id)} disabled={isPending} className="btn btn-primary">
-              <RotateCcw className="h-4 w-4" /> Restaurar
+              <RotateCcw className="h-4 w-4" /> {"Restaurar"}
             </button>
           </div>
         </div>

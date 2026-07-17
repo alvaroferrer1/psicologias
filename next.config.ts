@@ -25,6 +25,18 @@ const securityHeaders = [
     key: "X-Robots-Tag",
     value: "noindex, nofollow, noarchive",
   },
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "Cross-Origin-Resource-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "X-DNS-Prefetch-Control",
+    value: "on",
+  },
 ];
 
 const nextConfig: NextConfig = {
@@ -34,6 +46,15 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      {
+        source: "/dashboard/video",
+        headers: [
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+        ],
       },
     ];
   },

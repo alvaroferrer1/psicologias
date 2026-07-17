@@ -2,10 +2,12 @@ import { Trash2 } from "lucide-react";
 import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TrashPatientsClient } from "@/components/TrashPatientsClient";
+import { getServerT } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function TrashPage() {
+  const { t } = await getServerT();
   const user = await requireCurrentUser();
   const patients = await prisma.patient.findMany({
     where: {
@@ -23,8 +25,8 @@ export default async function TrashPage() {
             <Trash2 className="h-7 w-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">Papelera clinica</h1>
-            <p className="mt-1 text-sm font-medium text-slate-500">Recupera pacientes archivados sin perder su expediente.</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">{t("trash.title")}</h1>
+            <p className="mt-1 text-sm font-medium text-slate-500">{t("trash.subtitle")}</p>
           </div>
         </div>
       </div>

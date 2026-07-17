@@ -70,6 +70,42 @@ export async function createAppointment(data: { patientId: string, title: string
   }
 }
 
+export async function deleteAppointment(id: string) {
+  try {
+    const user = await requireEditableUser()
+    const appointment = await prisma.appointment.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+        OR: [{ userId: user.id }, { userId: null }],
+      },
+    })
+
+    if (!appointment) {
+      return { success: false, error: "Cita no encontrada." }
+    }
+
+    await prisma.appointment.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    })
+
+    await logAudit({
+      userId: user.id,
+      action: "appointment.delete",
+      entityType: "appointment",
+      entityId: id,
+      metadata: { patientId: appointment.patientId, type: appointment.type },
+    })
+
+    revalidatePath("/dashboard/calendar")
+    return { success: true }
+  } catch (error) {
+    console.error("Error deleting appointment:", error)
+    return { success: false, error: "No se pudo eliminar la cita." }
+  }
+}
+
 export async function getOrCreateVideoMeeting(appointmentId: string) {
   try {
     const user = await requireCurrentUser()
@@ -87,6 +123,7 @@ export async function getOrCreateVideoMeeting(appointmentId: string) {
     }
 
     const roomName = appointment.roomName || `Emotiva-${appointment.id.slice(0, 8)}`
+    const roomPassword = (appointment as { roomPassword?: string | null }).roomPassword || undefined
     const meetingUrl = appointment.meetingUrl || `https://meet.jit.si/${roomName}`
 
     const updated = await prisma.appointment.update({
@@ -108,7 +145,7 @@ export async function getOrCreateVideoMeeting(appointmentId: string) {
       metadata: { roomName, meetingUrl },
     })
 
-    return { success: true, appointment: updated }
+    return { success: true, appointment: { ...updated, roomPassword } }
   } catch (error) {
     console.error("Error creating video meeting:", error)
     return { success: false, error: "No se pudo preparar la videoconsulta." }

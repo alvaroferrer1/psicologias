@@ -14,6 +14,7 @@ import {
   revokeAllUserSessions,
   revokeCurrentSession,
 } from "@/lib/auth";
+import { clearFailedLogins, getLoginBlockStatus, registerFailedLogin } from "@/lib/login-block";
 
 const SELF_REGISTRATION_ENABLED = process.env.ENABLE_SELF_REGISTRATION !== "false";
 
@@ -180,26 +181,41 @@ export async function loginUser(formData: FormData) {
       return { success: false, error: "Credenciales invalidas." };
     }
 
+    const block = await getLoginBlockStatus(user.id);
+    if (block.blocked) {
+      await logAudit({
+        userId: user.id,
+        action: "login.blocked",
+        entityType: "user",
+        entityId: user.id,
+        metadata: { retryAfterSeconds: block.retryAfterSeconds },
+      });
+      return {
+        success: false,
+        error: `Cuenta temporalmente bloqueada. Intenta de nuevo en ${Math.ceil(block.retryAfterSeconds / 60)} minuto(s).`,
+      };
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          failedLoginAttempts: 0,
-          lockedUntil: null,
-        },
+      const result = await registerFailedLogin(user.id);
+      await logAudit({
+        userId: user.id,
+        action: "login.failed",
+        entityType: "user",
+        entityId: user.id,
+        metadata: { reason: "password_mismatch", attempts: result.blocked ? "locked" : "increment" },
       });
-      await logAudit({ userId: user.id, action: "login.failed", entityType: "user", entityId: user.id, metadata: { reason: "password_mismatch" } });
+      if (result.blocked) {
+        return {
+          success: false,
+          error: "Demasiados intentos fallidos. Cuenta bloqueada 15 minutos por seguridad.",
+        };
+      }
       return { success: false, error: "Credenciales invalidas." };
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-      },
-    });
+    await clearFailedLogins(user.id);
 
     await createAppSession(user.id);
     await logAudit({ userId: user.id, action: "login", entityType: "user", entityId: user.id });

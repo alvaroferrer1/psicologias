@@ -87,3 +87,50 @@ export async function getReportById(reportId: string) {
     return { success: false, error: "No se pudo cargar el informe." }
   }
 }
+
+const VALID_STATUSES = ["Borrador", "En revisión", "Completado"]
+
+export async function updateReportStatus(reportId: string, status: string) {
+  try {
+    const user = await requireEditableUser()
+    if (!reportId) {
+      return { success: false, error: "Informe no especificado." }
+    }
+    if (!VALID_STATUSES.includes(status)) {
+      return { success: false, error: "Estado no valido." }
+    }
+
+    const report = await prisma.report.findFirst({
+      where: {
+        id: reportId,
+        deletedAt: null,
+        OR: [{ userId: user.id }, { userId: null }],
+      },
+    })
+
+    if (!report) {
+      return { success: false, error: "Informe no encontrado." }
+    }
+
+    await prisma.report.update({
+      where: { id: reportId },
+      data: { status },
+    })
+
+    await logAudit({
+      userId: user.id,
+      action: "report.update_status",
+      entityType: "report",
+      entityId: reportId,
+      metadata: { status, previous: report.status },
+    })
+
+    revalidatePath("/dashboard/history")
+    revalidatePath(`/dashboard/history/${reportId}`)
+    revalidatePath("/dashboard")
+    return { success: true }
+  } catch (error) {
+    console.error("Error updating report status:", error)
+    return { success: false, error: "No se pudo actualizar el estado." }
+  }
+}

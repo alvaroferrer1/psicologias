@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { getReportById } from "@/app/actions/reports";
 import { useToast } from "@/components/ToastProvider";
+import { useT } from "@/lib/useT";
 import { parseStoredReportContent, serializeStoredReportContent } from "@/lib/report-content";
 import { calculateAge } from "@/lib/patient-utils";
 import {
@@ -39,6 +40,8 @@ function normalizeKind(value?: string | null): ReportKind {
 
 export default function ReportEditorPage() {
   const router = useRouter();
+  const { t, lang } = useT();
+  const locale = lang === "en" ? "en-US" : "es-ES";
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const reportId = searchParams.get("id");
@@ -55,6 +58,57 @@ export default function ReportEditorPage() {
   const [resolvedPatientId, setResolvedPatientId] = useState(patientId || "");
   const [reportKind, setReportKind] = useState<ReportKind>(kindParam);
   const [patientCategory, setPatientCategory] = useState<PatientCategory>(categoryParam);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+
+  const autoSave = useMemo(
+    () => async (nextTitle: string, nextFields: EditorFields, patient: string, kind: ReportKind, category: PatientCategory) => {
+      if (!patient) return;
+      setIsAutoSaving(true);
+      try {
+        const body = serializeStoredReportContent({ meta: { kind, category }, fields: nextFields });
+        await fetch("/api/reports/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reportId,
+            patientId: patient,
+            title: nextTitle,
+            body,
+            type: category,
+            reportKind: kind,
+            patientCategory: category,
+            status: "Borrador",
+          }),
+        });
+        setLastSavedAt(new Date());
+      } catch {
+        /* silencioso */
+      } finally {
+        setIsAutoSaving(false);
+      }
+    },
+    [reportId]
+  );
+
+  useEffect(() => {
+    if (!resolvedPatientId || isLoadingReport) return;
+    const id = window.setTimeout(() => {
+      void autoSave(title, fields, resolvedPatientId, reportKind, patientCategory);
+    }, 1800);
+    return () => window.clearTimeout(id);
+  }, [title, fields, resolvedPatientId, reportKind, patientCategory, isLoadingReport, autoSave]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (resolvedPatientId && !isSaving) void handleSave("Borrador");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [resolvedPatientId, isSaving, title, fields, reportKind, patientCategory]);
 
   const sections = useMemo(() => getReportSections(reportKind, patientCategory), [reportKind, patientCategory]);
   const requiredFields = useMemo(() => getRequiredFieldLabels(reportKind, patientCategory), [reportKind, patientCategory]);
@@ -76,7 +130,7 @@ export default function ReportEditorPage() {
       if (!mounted) return;
 
       if (!res.success || !res.report) {
-        setLoadError(res.error || "No se pudo cargar el informe.");
+        setLoadError(res.error || t("No se pudo cargar el informe."));
         setIsLoadingReport(false);
         return;
       }
@@ -118,12 +172,12 @@ export default function ReportEditorPage() {
     const maxSizeBytes = 4 * 1024 * 1024;
 
     if (!allowedTypes.includes(file.type)) {
-      toast({ type: "error", title: "Formato de imagen no permitido.", description: "Usa JPG, PNG o WEBP." });
+      toast({ type: "error", title: t("No se pudo guardar"), description: t("Revisa los campos e inténtalo de nuevo.") });
       return;
     }
 
     if (file.size > maxSizeBytes) {
-      toast({ type: "error", title: "La imagen es demasiado grande.", description: "El tamano maximo permitido es 4 MB." });
+      toast({ type: "error", title: t("Error al guardar"), description: t("No se pudo completar el guardado.") });
       return;
     }
 
@@ -147,7 +201,7 @@ export default function ReportEditorPage() {
 
   const handleSave = async (status: string) => {
     if (!resolvedPatientId) {
-      toast({ type: "error", title: "El documento no tiene paciente enlazado." });
+      toast({ type: "error", title: t("Error al cargar plantillas") });
       return;
     }
 
@@ -160,8 +214,8 @@ export default function ReportEditorPage() {
       if (missing.length > 0) {
         toast({
           type: "error",
-          title: "Faltan campos obligatorios.",
-          description: missing.map((field) => field.name).join(" · "),
+          title: t("Nuevo informe"),
+          description: missing.map((field) => field.name).join(" Â· "),
         });
         return;
       }
@@ -192,12 +246,12 @@ export default function ReportEditorPage() {
       if (res.ok) {
         router.push("/dashboard/history");
         router.refresh();
-        toast({ type: "success", title: status === "Finalizado" ? "Documento finalizado." : "Borrador guardado." });
+        toast({ type: "success", title: status === "Finalizado" ? t("Informe finalizado") : t("Borrador guardado") });
       } else {
-        toast({ type: "error", title: "No se pudo guardar el documento." });
+        toast({ type: "error", title: t("No se pudo finalizar") });
       }
     } catch {
-      toast({ type: "error", title: "Fallo de red al guardar el documento." });
+      toast({ type: "error", title: t("No se pudo guardar el borrador") });
     } finally {
       setIsSaving(false);
     }
@@ -222,7 +276,7 @@ export default function ReportEditorPage() {
       return (
         <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/50 p-4">
           <label className="btn btn-secondary cursor-pointer">
-            <ImagePlus className="h-4 w-4" /> Subir imagen
+            <ImagePlus className="h-4 w-4" /> {t("Subir imagen")}
             <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(field.key, e.target.files?.[0])} />
           </label>
           {typeof value === "string" && value && (
@@ -246,7 +300,7 @@ export default function ReportEditorPage() {
   };
 
   if (isLoadingReport) {
-    return <div className="flex h-[calc(100vh-6rem)] items-center justify-center"><div className="card p-6 text-center"><p className="text-sm font-semibold text-slate-500">Cargando documento...</p></div></div>;
+    return <div className="flex h-[calc(100vh-6rem)] items-center justify-center"><div className="card p-6 text-center"><p className="text-sm font-semibold text-slate-500">{t("Cargando informe...")}</p></div></div>;
   }
 
   if (loadError) {
@@ -254,9 +308,9 @@ export default function ReportEditorPage() {
       <div className="flex h-[calc(100vh-6rem)] items-center justify-center">
         <div className="card max-w-lg p-6 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600"><AlertCircle className="h-6 w-6" /></div>
-          <h2 className="text-lg font-bold text-secondary-text">No se pudo abrir el documento</h2>
+          <h2 className="text-lg font-bold text-secondary-text">{t("Editor de informe")}</h2>
           <p className="mt-2 text-sm text-slate-500">{loadError}</p>
-          <button type="button" onClick={handleBack} className="btn btn-primary mt-5"><ArrowLeft className="h-4 w-4" /> Volver</button>
+          <button type="button" onClick={handleBack} className="btn btn-primary mt-5"><ArrowLeft className="h-4 w-4" /> {t("Volver")}</button>
         </div>
       </div>
     );
@@ -271,15 +325,24 @@ export default function ReportEditorPage() {
           <button type="button" onClick={handleBack} className="btn btn-ghost btn-icon rounded-full"><ArrowLeft className="h-5 w-5" /></button>
           <div>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="rounded bg-transparent px-2 py-1 text-sm font-bold text-slate-800 outline-none hover:bg-slate-50 md:text-base" />
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              {getReportKindLabel(reportKind)} · {getPatientCategoryLabel(patientCategory)}
+            <p className="mt-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              {getReportKindLabel(reportKind)} Â· {getPatientCategoryLabel(patientCategory)}
+              <span className="flex items-center gap-1 normal-case tracking-normal text-slate-400">
+                {isAutoSaving ? (
+                  <>
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" /> {t("Sin guardar")}
+                  </>
+                ) : lastSavedAt ? (
+                  <>Guardado {lastSavedAt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</>
+                ) : null}
+              </span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button disabled={isSaving} onClick={() => handleSave("Borrador")} className="btn btn-secondary border-slate-200 bg-white text-slate-600 hover:bg-slate-50" type="button"><Save className="h-4 w-4" /> <span className="hidden sm:inline">Guardar borrador</span></button>
-          <button disabled={isSaving} onClick={() => handleSave("Finalizado")} className="btn btn-primary" type="button"><CheckCircle2 className="h-4 w-4" /> <span className="hidden sm:inline">Finalizar</span></button>
+          <button disabled={isSaving} onClick={() => handleSave("Borrador")} className="btn btn-secondary border-slate-200 bg-white text-slate-600 hover:bg-slate-50" type="button"><Save className="h-4 w-4" /> <span className="hidden sm:inline">{t("Guardar borrador")}</span></button>
+          <button disabled={isSaving} onClick={() => handleSave("Finalizado")} className="btn btn-primary" type="button"><CheckCircle2 className="h-4 w-4" /> <span className="hidden sm:inline">{t("Finalizar")}</span></button>
         </div>
       </div>
 
@@ -325,9 +388,9 @@ export default function ReportEditorPage() {
 
       <div className="z-10 flex shrink-0 justify-center border-t border-secondary-border bg-white px-4 py-4 shadow-nav md:px-8">
         <div className="flex w-full max-w-4xl items-center justify-between">
-          <button onClick={() => currentStep > 1 && setCurrentStep((prev) => prev - 1)} disabled={currentStep === 1} className="btn btn-secondary border-slate-200 bg-white disabled:opacity-50" type="button"><ArrowLeft className="h-4 w-4" /> Anterior</button>
+          <button onClick={() => currentStep > 1 && setCurrentStep((prev) => prev - 1)} disabled={currentStep === 1} className="btn btn-secondary border-slate-200 bg-white disabled:opacity-50" type="button"><ArrowLeft className="h-4 w-4" /> {t("Atrás")}</button>
           <button onClick={() => { if (currentStep < sections.length) setCurrentStep((prev) => prev + 1); else handleSave("Finalizado"); }} className="btn btn-primary" type="button">
-            {currentStep === sections.length ? "Finalizar documento" : "Siguiente"}
+            {currentStep === sections.length ? t("Finalizar informe") : t("Siguiente")}
             {currentStep !== sections.length && <ArrowRight className="h-4 w-4" />}
           </button>
         </div>

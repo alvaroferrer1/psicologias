@@ -2,8 +2,24 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { CookieBanner } from "@/components/CookieBanner";
 import { ToastProvider } from "@/components/ToastProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import { LockScreen } from "@/components/LockScreen";
+import { getServerLang } from "@/lib/i18n-server";
 
-const siteUrl = "https://psicologias-emotiva.vercel.app";
+function resolveSiteUrl() {
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.SITE_URL ||
+    "https://app.psicologiagio.com";
+
+  try {
+    return new URL(configuredUrl).toString().replace(/\/$/, "");
+  } catch {
+    return "https://app.psicologiagio.com";
+  }
+}
+
+const siteUrl = resolveSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -71,18 +87,30 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const IS_LOCKED = process.env.NEXT_PUBLIC_SITE_LOCKED === "true";
+  const serverLang = await getServerLang();
+
   return (
-    <html lang="es">
+    <html lang={serverLang} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');var d=document.documentElement;if(t==='dark'){d.classList.add('dark');d.style.colorScheme='dark';}else{d.classList.remove('dark');d.style.colorScheme='light';}}catch(e){}try{var k='psyreport.ui';var raw=localStorage.getItem(k);var lang='es';if(raw){var p=JSON.parse(raw);if(p&&(p.language==='en')){lang='en';}}d.setAttribute('lang',lang);}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="relative min-h-screen bg-secondary-bg text-secondary-text antialiased">
-        <ToastProvider>
-          {children}
-          <CookieBanner />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            {IS_LOCKED ? <LockScreen /> : children}
+            <CookieBanner />
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

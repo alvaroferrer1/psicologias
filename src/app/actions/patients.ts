@@ -32,6 +32,42 @@ export async function getPatients() {
   }
 }
 
+export async function getPatientsPaginated(opts?: { search?: string; cursor?: string; take?: number }) {
+  try {
+    const user = await requireEditableUser()
+    const take = Math.min(opts?.take ?? 50, 100)
+    const search = opts?.search?.trim().toLowerCase()
+
+    const patients = await prisma.patient.findMany({
+      where: {
+        deletedAt: null,
+        OR: [{ userId: user.id }, { userId: null }],
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { dni: { contains: search, mode: "insensitive" } },
+                { email: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+        ...(opts?.cursor ? { id: { lt: opts.cursor } } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: take + 1,
+    })
+
+    const hasMore = patients.length > take
+    const items = hasMore ? patients.slice(0, take) : patients
+    const nextCursor = hasMore ? items[items.length - 1].id : null
+
+    return { patients: items, nextCursor, hasMore }
+  } catch (error) {
+    console.error("Error fetching patients:", error)
+    return { patients: [], nextCursor: null, hasMore: false }
+  }
+}
+
 export async function getArchivedPatients() {
   try {
     const user = await requireEditableUser()

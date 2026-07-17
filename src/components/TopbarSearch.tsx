@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/useT";
 
 export default function TopbarSearch() {
   const router = useRouter();
+  const { t } = useT();
   const [query, setQuery] = useState("");
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -23,8 +25,8 @@ export default function TopbarSearch() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar paciente, informe o cita..."
-          className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+          placeholder={"Buscar pacientes, informes, citas..."}
+          className="topbar-search h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
         />
       </div>
     </form>

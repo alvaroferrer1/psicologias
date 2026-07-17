@@ -3,8 +3,10 @@
 import { Search } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTransition, useState, useEffect } from "react";
+import { useT } from "@/lib/useT";
 
-export function SearchInput({ placeholder = "Buscar..." }: { placeholder?: string }) {
+export function SearchInput({ placeholder = "" }: { placeholder?: string }) {
+  const { t } = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -35,7 +37,7 @@ export function SearchInput({ placeholder = "Buscar..." }: { placeholder?: strin
         type="text" 
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder} 
+        placeholder={placeholder || "Buscar..."} 
         className="inp pl-9 py-2 bg-white"
       />
     </div>

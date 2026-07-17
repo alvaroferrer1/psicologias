@@ -3,18 +3,20 @@
 import { useState } from "react";
 import { Cookie, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/useT";
 
 export function CookiePreferences() {
+  const { t } = useT();
   const [message, setMessage] = useState("");
 
   const handleResetBanner = () => {
     localStorage.removeItem("psyreport_cookies_accepted");
-    setMessage("El aviso de cookies volverá a mostrarse en la próxima carga.");
+    setMessage("El banner de cookies volverá a mostrarse.");
   };
 
   const handleAcceptNow = () => {
     localStorage.setItem("psyreport_cookies_accepted", "true");
-    setMessage("Preferencia de cookies guardada correctamente.");
+    setMessage("Preferencias de cookies guardadas.");
   };
 
   return (
@@ -24,9 +26,9 @@ export function CookiePreferences() {
           <Cookie className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-secondary-text">Privacidad y Cookies</h2>
+          <h2 className="text-lg font-bold text-secondary-text">{"Preferencias de cookies"}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Gestiona el banner legal y accede rápido a la documentación de privacidad.
+            {"Gestiona el consentimiento de cookies en cualquier momento."}
           </p>
         </div>
       </div>
@@ -39,18 +41,18 @@ export function CookiePreferences() {
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button type="button" onClick={handleAcceptNow} className="btn btn-primary">
-          Guardar aceptación
-        </button>
-        <button type="button" onClick={handleResetBanner} className="btn btn-secondary">
-          Volver a mostrar banner
-        </button>
-        <a href="/cookies" className="btn btn-ghost border-slate-200 text-slate-600 hover:bg-slate-100">
-          Política de Cookies
-        </a>
-        <a href="/privacy" className="btn btn-ghost border-slate-200 text-slate-600 hover:bg-slate-100">
-          Política de Privacidad
-        </a>
+          <button type="button" onClick={handleAcceptNow} className="btn btn-primary">
+            {"Aceptar cookies"}
+          </button>
+          <button type="button" onClick={handleResetBanner} className="btn btn-secondary">
+            {"Mostrar banner"}
+          </button>
+          <a href="/cookies" className="btn btn-ghost border-slate-200 text-slate-600 hover:bg-slate-100">
+            {"Política de cookies"}
+          </a>
+          <a href="/privacy" className="btn btn-ghost border-slate-200 text-slate-600 hover:bg-slate-100">
+            {"Política de privacidad"}
+          </a>
       </div>
     </div>
   );

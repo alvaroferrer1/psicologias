@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   AlertTriangle,
@@ -23,6 +23,7 @@ import {
   getPatientTypeLabel,
 } from "@/lib/patient-utils";
 import { prisma } from "@/lib/prisma";
+import { getServerT } from "@/lib/i18n-server";
 
 type TimelineItem = {
   id: string;
@@ -36,6 +37,8 @@ type TimelineItem = {
 
 export default async function PatientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireCurrentUser();
+  const { t, lang } = await getServerT();
+  const locale = lang === "en" ? "en-US" : "es-ES";
   const { id } = await params;
 
   if (!id) notFound();
@@ -94,8 +97,8 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">Ficha del paciente</h1>
-          <p className="text-sm font-medium text-slate-500">Seguimiento clinico, informes y actividad reciente.</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">{t("Ficha del paciente")}</h1>
+          <p className="text-sm font-medium text-slate-500">{t("Información y seguimiento del paciente.")}</p>
         </div>
       </div>
 
@@ -124,7 +127,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Link href={`/dashboard/new-report?patient=${patient.id}`} className="btn btn-primary">
-                  <Plus className="h-4 w-4" /> Nuevo informe
+                  <Plus className="h-4 w-4" /> {t("Nuevo informe")}
                 </Link>
                 <PatientEditSheet
                   patient={{
@@ -153,11 +156,11 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                 <p className="mt-2 text-3xl font-black text-secondary-text">{patient.reports.length}</p>
               </div>
               <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Finalizados</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Datos personales")}</p>
                 <p className="mt-2 text-3xl font-black text-secondary-text">{completedReports.length}</p>
               </div>
               <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Proximas citas</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Contacto")}</p>
                 <p className="mt-2 text-3xl font-black text-secondary-text">{upcomingAppointments.length}</p>
               </div>
             </div>
@@ -165,16 +168,16 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="card p-6">
-              <h3 className="text-lg font-extrabold text-secondary-text">Datos de contacto</h3>
+              <h3 className="text-lg font-extrabold text-secondary-text">{t("Información básica")}</h3>
               <div className="mt-5 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">DNI</p>
-                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.dni || "No especificado"}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Documento")}</p>
+                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.dni || t("Sin datos")}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Edad</p>
-                    <p className="mt-2 text-sm font-semibold text-secondary-text">{age !== null ? `${age} anos` : "No especificada"}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("DNI")}</p>
+                    <p className="mt-2 text-sm font-semibold text-secondary-text">{age !== null ? `${age} {t("años")}` : t("Sin datos")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
@@ -182,8 +185,8 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                     <Phone className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Telefono</p>
-                    <p className="text-sm font-semibold text-secondary-text">{patient.phone || "No especificado"}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Teléfono")}</p>
+                    <p className="text-sm font-semibold text-secondary-text">{patient.phone || t("Sin datos")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
@@ -191,8 +194,8 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                     <Mail className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Email</p>
-                    <p className="text-sm font-semibold text-secondary-text">{patient.email || "No especificado"}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Email")}</p>
+                    <p className="text-sm font-semibold text-secondary-text">{patient.email || t("Sin datos")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
@@ -200,15 +203,15 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                     <Calendar className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Fecha de nacimiento</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Fecha de nacimiento")}</p>
                     <p className="text-sm font-semibold text-secondary-text">
-                      {patient.birthDate ? new Date(patient.birthDate).toLocaleDateString("es-ES") : "No especificada"}
+                      {patient.birthDate ? new Date(patient.birthDate).toLocaleDateString(locale) : t("Sin datos")}
                     </p>
                   </div>
                 </div>
                 {birthdayAlert && (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-amber-700">Aviso de cumpleanos</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-700">{t("Alertas clínicas")}</p>
                     <p className="mt-2 text-sm font-semibold text-amber-900">{birthdayAlert}</p>
                   </div>
                 )}
@@ -216,33 +219,33 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
             </div>
 
             <div className="card p-6">
-              <h3 className="text-lg font-extrabold text-secondary-text">Datos del apoderado y alertas</h3>
+              <h3 className="text-lg font-extrabold text-secondary-text">{t("Apoderado / tutor")}</h3>
               <div className="mt-5 space-y-4">
                 <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Apoderado / tutor</p>
-                  <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianName || "No especificado"}</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Nombre del apoderado")}</p>
+                  <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianName || t("Sin datos")}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">DNI apoderado</p>
-                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianDni || "No especificado"}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("DNI del apoderado")}</p>
+                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianDni || t("Sin datos")}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Telefono</p>
-                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianPhone || "No especificado"}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Teléfono")}</p>
+                    <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianPhone || t("Sin datos")}</p>
                   </div>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Email apoderado</p>
-                  <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianEmail || "No especificado"}</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Email")}</p>
+                  <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.guardianEmail || t("Sin datos")}</p>
                 </div>
                 <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="mt-0.5 h-4 w-4 text-red-600" />
                     <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-red-600">Alertas clinicas</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-red-600">{t("Eliminar paciente")}</p>
                       <p className="mt-2 text-sm font-semibold text-red-900">
-                        {patient.clinicalAlerts || "Sin alertas clinicas registradas."}
+                         {patient.clinicalAlerts || t("Sin alertas registradas.")}
                       </p>
                     </div>
                   </div>
@@ -253,9 +256,9 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
 
           <div className="card p-6">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-extrabold text-secondary-text">Timeline clinica</h3>
+              <h3 className="text-lg font-extrabold text-secondary-text">{t("Notas clínicas")}</h3>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-slate-500">
-                {timeline.length} eventos
+                {timeline.length} {t("notas")}
               </span>
             </div>
 
@@ -279,12 +282,12 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                       </div>
                       <p className="mt-1 text-sm font-medium text-slate-500">{item.subtitle}</p>
                       <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        {item.date.toLocaleString("es-ES")}
+                        {item.date.toLocaleString(locale)}
                       </p>
                     </div>
                     {item.href && (
                       <Link href={item.href} className="btn btn-ghost self-center text-primary hover:bg-white">
-                        Abrir
+                        {t("Ver")}
                       </Link>
                     )}
                   </div>
@@ -297,15 +300,15 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
         <div className="space-y-6">
           <div className="card p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-extrabold text-secondary-text">Informes</h3>
+              <h3 className="text-lg font-extrabold text-secondary-text">{t("Documentos")}</h3>
               <Link href={`/dashboard/new-report?patient=${patient.id}`} className="text-sm font-bold text-primary hover:underline">
-                Crear
+                {t("Sin documentos vinculados.")}
               </Link>
             </div>
             <div className="mt-5 space-y-3">
               {patient.reports.length === 0 ? (
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 text-sm text-slate-500">
-                  No hay informes vinculados todavia.
+                  {t("(privado)")}
                 </div>
               ) : (
                 patient.reports.slice(0, 5).map((report) => (
@@ -318,7 +321,7 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                         <Clock className="h-4 w-4 text-amber-600" />
                       )}
                     </div>
-                    <p className="mt-2 text-sm text-slate-500">{new Date(report.updatedAt).toLocaleDateString("es-ES")}</p>
+                    <p className="mt-2 text-sm text-slate-500">{new Date(report.updatedAt).toLocaleDateString(locale)}</p>
                   </Link>
                 ))
               )}
@@ -327,15 +330,15 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
 
           <div className="card p-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-extrabold text-secondary-text">Citas</h3>
+              <h3 className="text-lg font-extrabold text-secondary-text">{t("Consentimientos")}</h3>
               <Link href="/dashboard/calendar" className="text-sm font-bold text-primary hover:underline">
-                Ver agenda
+                {t("Sin consentimientos.")}
               </Link>
             </div>
             <div className="mt-5 space-y-3">
               {patient.appointments.length === 0 ? (
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 text-sm text-slate-500">
-                  No hay citas registradas.
+                  {t("Enviar a papelera")}
                 </div>
               ) : (
                 patient.appointments.slice(0, 6).map((appointment) => (
@@ -346,10 +349,10 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
                         {appointment.type}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm text-slate-500">{new Date(appointment.date).toLocaleString("es-ES")}</p>
+                    <p className="mt-2 text-sm text-slate-500">{new Date(appointment.date).toLocaleString(locale)}</p>
                     {appointment.type === "Videoconsulta" && (
                       <Link href={`/dashboard/video?appointment=${appointment.id}`} className="btn btn-ghost mt-3 text-primary hover:bg-white">
-                        <Video className="h-4 w-4" /> Entrar
+                        <Video className="h-4 w-4" /> {t("Unirse a videoconsulta")}
                       </Link>
                     )}
                   </div>
@@ -359,20 +362,20 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
           </div>
 
           <div className="card p-6">
-            <h3 className="text-lg font-extrabold text-secondary-text">Resumen clinico</h3>
+            <h3 className="text-lg font-extrabold text-secondary-text">{t("Agenda")}</h3>
             <div className="mt-5 space-y-3">
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Tipo de paciente</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Próximas citas")}</p>
                 <p className="mt-2 text-sm font-semibold text-secondary-text">{getPatientTypeLabel(patient.patientType)}</p>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Direccion</p>
-                <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.address || "No especificada"}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Sin citas próximas.")}</p>
+                <p className="mt-2 text-sm font-semibold text-secondary-text">{patient.address || t("Sin datos")}</p>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
                 <div className="flex items-center gap-2">
                   <UserSquare2 className="h-4 w-4 text-primary" />
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Estado actual</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t("Dirección")}</p>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-secondary-text">{getPatientStatusLabel(patientStatus)}</p>
               </div>
@@ -383,3 +386,5 @@ export default async function PatientProfilePage({ params }: { params: Promise<{
     </div>
   );
 }
+
+

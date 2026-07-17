@@ -15,6 +15,10 @@ model User {
   role                String               @default("USER")
   colegiado           String?
   dni                 String?
+  phone               String?
+  address             String?
+  bio                 String?
+  specialization      String?
   avatarUrl           String?
   signatureDataUrl    String?
   stampDataUrl        String?
@@ -32,6 +36,10 @@ model User {
   patientDocuments    PatientDocument[]
   consentRecords      ConsentRecord[]
   sentInvitations     Invitation[]         @relation("InvitationSentBy")
+  compactMode         Boolean              @default(false)
+  remindersEnabled    Boolean              @default(true)
+  exportJsonByDefault Boolean              @default(true)
+  privacyMode         Boolean              @default(false)
 }
 
 model Session {
@@ -121,6 +129,7 @@ model Appointment {
   patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
   meetingUrl      String?
   roomName        String?
+  roomPassword    String?
   provider        String?
   startedAt       DateTime?
   endedAt         DateTime?

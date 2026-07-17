@@ -78,7 +78,6 @@ export async function revokeAllUserSessions(userId: string, exceptSessionToken?:
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
-  const headerStore = await headers();
   const sessionToken = cookieStore.get(SESSION_COOKIE)?.value;
 
   if (!sessionToken) {
@@ -103,7 +102,6 @@ export async function getCurrentUser() {
   });
 
   if (!session?.user) {
-    cookieStore.delete(SESSION_COOKIE);
     return null;
   }
 
@@ -118,16 +116,6 @@ export async function getCurrentUser() {
       ...(shouldRefresh ? { expiresAt: nextExpiry } : {}),
     },
   });
-
-  if (shouldRefresh) {
-    cookieStore.set(SESSION_COOKIE, sessionToken, {
-      httpOnly: true,
-      secure: shouldUseSecureCookies(headerStore.get("host")),
-      sameSite: "lax",
-      maxAge: SESSION_MAX_AGE,
-      path: "/",
-    });
-  }
 
   return session.user;
 }

@@ -1,10 +1,12 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { requireAdminUser } from "@/lib/auth";
 import { getInvitations } from "@/app/actions/auth";
 import { TeamInvitesClient } from "@/components/TeamInvitesClient";
+import { getServerT } from "@/lib/i18n-server";
 
 export default async function TeamPage() {
-  await requireAdminUser();
+  const user = await requireAdminUser();
+  const { t, lang } = await getServerT();
   const emailConfigured = Boolean(
     process.env.RESEND_API_KEY &&
     process.env.RESEND_FROM_EMAIL &&
@@ -19,8 +21,13 @@ export default async function TeamPage() {
       email: true,
       dni: true,
       role: true,
+      colegiado: true,
+      specialization: true,
       createdAt: true,
       lockedUntil: true,
+      _count: {
+        select: { patients: true, appointments: true, reports: true },
+      },
     },
   });
 
@@ -29,13 +36,13 @@ export default async function TeamPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">Equipo e invitaciones</h1>
-        <p className="mt-1 text-sm font-medium text-slate-500">Crea accesos por email con rol, revisa invitaciones y controla quien entra al sistema.</p>
+        <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">{t("Equipo")}</h1>
+        <p className="mt-1 text-sm font-medium text-slate-500">{t("Invita y gestiona los profesionales de tu clínica.")}</p>
       </div>
 
       {!emailConfigured && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
-          El envio real de correos aun no esta configurado en este entorno. Para invitaciones y recuperacion reales hacen falta
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+          {t("Invitar miembro")}
           <span className="mx-1 font-mono">RESEND_API_KEY</span>,
           <span className="mx-1 font-mono">RESEND_FROM_EMAIL</span> y
           <span className="mx-1 font-mono">NEXT_PUBLIC_APP_URL</span>.
@@ -43,9 +50,18 @@ export default async function TeamPage() {
       )}
 
       <TeamInvitesClient
-        users={users.map((user) => ({
-          ...user,
-          createdAt: user.createdAt.toISOString(),
+        currentUserId={user.id}
+        users={users.map((u) => ({
+          ...u,
+          colegiado: u.colegiado || "",
+          specialization: u.specialization || "",
+          createdAt: u.createdAt.toISOString(),
+          lockedUntil: u.lockedUntil ? u.lockedUntil.toISOString() : null,
+          counts: {
+            patients: u._count.patients,
+            appointments: u._count.appointments,
+            reports: u._count.reports,
+          },
         }))}
         invitations={invitations.map((invitation) => ({
           id: invitation.id,
@@ -55,7 +71,7 @@ export default async function TeamPage() {
           createdAt: invitation.createdAt.toISOString(),
           expiresAt: invitation.expiresAt.toISOString(),
           acceptedAt: invitation.acceptedAt?.toISOString() || null,
-          invitedBy: invitation.invitedByUser?.name || "Administrador",
+          invitedBy: invitation.invitedByUser?.name || t("Por invitación"),
         }))}
       />
     </div>

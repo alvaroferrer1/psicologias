@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
+import { useT } from "@/lib/useT";
 
 type PdfField = {
   label: string;
@@ -46,6 +47,7 @@ export function ReportPdfButton({
   stampImage?: string;
 }) {
   const { toast } = useToast();
+  const { t } = useT();
   const [isExporting, setIsExporting] = useState(false);
 
   const loadImageAsDataUrl = async (src?: string) => {
@@ -57,9 +59,9 @@ export function ReportPdfButton({
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === "string") resolve(reader.result);
-        else reject(new Error("No se pudo leer la imagen."));
+       else reject(new Error(t("No se pudo generar el PDF.")));
       };
-      reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
+      reader.onerror = () => reject(new Error(t("No se pudo generar el PDF.")));
       reader.readAsDataURL(blob);
     });
   };
@@ -134,7 +136,7 @@ export function ReportPdfButton({
             pdf.setFont("helvetica", "normal");
             pdf.setFontSize(10);
             pdf.setTextColor(muted);
-            pdf.text("Imagen no disponible.", margin, y + 6);
+            pdf.text(t("Firma"), margin, y + 6);
             y += 12;
           });
       }
@@ -169,7 +171,7 @@ export function ReportPdfButton({
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(12);
     pdf.setTextColor(darkBlue);
-    pdf.text("CENTRO PSICOLOGICO EMOTIVA", 24, 150);
+    pdf.text(t("Bloque de firma"), 24, 150);
     pdf.setFont("helvetica", "italic");
     pdf.setFontSize(11);
     pdf.setTextColor("#334155");
@@ -197,7 +199,7 @@ export function ReportPdfButton({
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(10);
     pdf.setTextColor("#FFFFFF");
-    pdf.text("Fecha del documento", 31, 255);
+    pdf.text(t("Sello"), 31, 255);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(10);
     pdf.text(updatedAt.split(",")[0] || updatedAt, 31, 261);
@@ -239,13 +241,13 @@ export function ReportPdfButton({
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(15);
     pdf.setTextColor(primaryBlue);
-    pdf.text("Firma y sello", margin, y);
+    pdf.text(t("Firmado por"), margin, y);
     y += 9;
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
     pdf.setTextColor(textColor);
-    pdf.text(signatureName || "Pendiente de firma", margin, y);
+    pdf.text(signatureName || t("Profesional"), margin, y);
     y += 7;
 
     const signatureData = await loadImageAsDataUrl(signatureImage);
@@ -259,7 +261,7 @@ export function ReportPdfButton({
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(10);
       pdf.setTextColor(muted);
-      pdf.text("Firma no disponible", margin + 4, y + 13);
+      pdf.text(t("Firma"), margin + 4, y + 13);
     }
 
     if (stampData) {
@@ -270,7 +272,7 @@ export function ReportPdfButton({
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(10);
       pdf.setTextColor(muted);
-      pdf.text("Sello", margin + 88, y + 13);
+      pdf.text(t("con sello"), margin + 88, y + 13);
     }
 
     pdf.save(filename);
@@ -280,16 +282,16 @@ export function ReportPdfButton({
     setIsExporting(true);
     try {
       await buildPdf();
-      toast({ type: "success", title: "PDF generado correctamente." });
+      toast({ type: "success", title: t("PDF exportado.") });
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : "";
       toast({
         type: "error",
-        title: "No se pudo exportar el PDF.",
+        title: t("Exportar PDF"),
         description:
           message ||
-            "Comprueba que el documento este cargado por completo y que las imagenes subidas sean validas antes de descargar.",
+            t("Generando PDF..."),
       });
     } finally {
       setIsExporting(false);
@@ -298,7 +300,7 @@ export function ReportPdfButton({
 
   return (
     <button id={buttonId} type="button" onClick={handleExport} className="btn btn-primary" disabled={isExporting}>
-      <Download className="h-4 w-4" /> {isExporting ? "Generando PDF..." : "Descargar PDF"}
+      <Download className="h-4 w-4" /> {isExporting ? t("Exportando...") : t("Exportar PDF")}
     </button>
   );
 }

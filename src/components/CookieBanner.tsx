@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Shield } from "lucide-react";
+import { useT } from "@/lib/useT";
 
 export function CookieBanner() {
+  const { t } = useT();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -24,11 +26,10 @@ export function CookieBanner() {
            <Shield className="w-5 h-5 text-primary" />
         </div>
         <div className="text-sm text-slate-300 leading-relaxed">
-          <p className="font-bold text-white text-base mb-1">Protección de Datos y Cookies (RGPD)</p>
-          <p>
-            PsyReport utiliza cookies técnicas estrictamente necesarias para mantener tu sesión activa y cifrada de forma segura. 
-            No utilizamos cookies de rastreo publicitario. Al continuar usando la plataforma, aceptas nuestra <Link href="/cookies" className="text-primary hover:text-white font-bold underline underline-offset-2 transition-colors">Política de Cookies</Link> y el almacenamiento seguro detallado en la <Link href="/privacy" className="text-primary hover:text-white font-bold underline underline-offset-2 transition-colors">Política de Privacidad</Link>.
-          </p>
+            <p className="font-bold text-white text-base mb-1">{"Configuración de cookies"}</p>
+            <p>
+              {"Usamos cookies para"} <Link href="/cookies" className="text-primary hover:text-white font-bold underline underline-offset-2 transition-colors">{"política de cookies"}</Link> {"y la"} <Link href="/privacy" className="text-primary hover:text-white font-bold underline underline-offset-2 transition-colors">{"política de privacidad"}</Link>.
+            </p>
         </div>
       </div>
       <div className="flex gap-3 shrink-0 w-full md:w-auto mt-2 md:mt-0">
@@ -36,7 +37,7 @@ export function CookieBanner() {
           onClick={() => { localStorage.setItem("psyreport_cookies_accepted", "true"); setShow(false); }} 
           className="btn btn-primary w-full md:w-auto shadow-lg shadow-primary/20"
         >
-          Aceptar y Continuar
+          {"Aceptar"}
         </button>
       </div>
     </div>

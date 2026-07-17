@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
+import { useT } from "@/lib/useT";
 
 type ExportValue = string | number | boolean | null | undefined;
 type ExportRow = Record<string, ExportValue>;
@@ -21,6 +22,7 @@ export function ExportButton({
   icon?: boolean;
   title?: string;
 }) {
+  const { t } = useT();
   const { toast } = useToast();
 
   const handleExport = () => {
@@ -46,9 +48,9 @@ export function ExportButton({
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast({ type: "success", title: "CSV exportado correctamente." });
+      toast({ type: "success", title: "Exportación completada." });
     } catch {
-      toast({ type: "error", title: "No se pudo generar el CSV." });
+      toast({ type: "error", title: "Error al exportar." });
     }
   };
 

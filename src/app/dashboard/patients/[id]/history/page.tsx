@@ -1,15 +1,17 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/auth";
 import { PatientWorkspace } from "@/components/PatientWorkspace";
+import { getServerT } from "@/lib/i18n-server";
 
 export default async function PatientHistoryPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { t } = await getServerT();
   const user = await requireCurrentUser();
   const { id } = await params;
 
@@ -51,8 +53,8 @@ export default async function PatientHistoryPage({
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">Expediente clinico del paciente</h1>
-          <p className="text-sm font-medium text-slate-500">{patient.name} · historial, notas, documentos y consentimientos.</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-secondary-text md:text-3xl">{t("Historial de informes")}</h1>
+          <p className="text-sm font-medium text-slate-500">{patient.name} Â· {t("Historial")}</p>
         </div>
       </div>
 

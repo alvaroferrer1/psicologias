@@ -37,7 +37,35 @@
   --color-bg-card: #ffffff;
 }
 
-/* Removido Dark Mode para forzar compatibilidad con Light Mode a petición del cliente */
+/* Dark mode soportado mediante next-themes (clase .dark en <html>) */
+
+.dark {
+  --color-primary: #4f9bff;
+  --color-primary-dark: #2f7fe0;
+  --color-primary-xdark: #1a5bb0;
+  --color-primary-light: #11233f;
+  --color-primary-muted: #1c3a63;
+  --color-primary-border: rgba(79, 155, 255, 0.25);
+
+  --color-secondary-bg: #0b1220;
+  --color-secondary-card: #111c30;
+  --color-secondary-border: #1e2c44;
+  --color-secondary-text: #e6edf7;
+  --color-secondary-muted: #93a4bd;
+  --color-secondary-subtle: #64748b;
+
+  --color-bg-base: #0b1220;
+  --color-bg-card: #111c30;
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3);
+  --shadow-modal: 0 20px 60px rgba(0,0,0,0.5);
+  --shadow-nav: 0 4px 6px -1px rgba(0,0,0,0.4);
+}
+
+.dark body {
+  background: var(--color-bg-base);
+  color: var(--color-secondary-text);
+}
 
 /* Material Icons Outlined */
 @layer base {
@@ -207,3 +235,167 @@ body.privacy-sensitive .sensitive-text:hover {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Utilidades de superficie que respetan el modo oscuro.
+   Muchas tarjetas usan bg-white / bg-slate-50 de forma literal; en .dark
+   las redirigimos a las variables de superficie para no quemar fondos blancos. */
+.dark .bg-white {
+  background-color: var(--color-bg-card);
+}
+.dark .bg-slate-50 {
+  background-color: var(--color-secondary-card);
+}
+.dark .bg-slate-100 {
+  background-color: #16233b;
+}
+.dark .border-slate-100 {
+  border-color: var(--color-secondary-border);
+}
+.dark .border-slate-200 {
+  border-color: var(--color-secondary-border);
+}
+.dark .text-slate-400 {
+  color: var(--color-secondary-subtle);
+}
+.dark .text-slate-500 {
+  color: var(--color-secondary-muted);
+}
+.dark .text-slate-600 {
+  color: #c3d0e2;
+}
+.dark .text-slate-700 {
+  color: #dbe6f4;
+}
+.dark .hover\:bg-slate-200:hover {
+  background-color: #1e2c44;
+}
+.dark .hover\:bg-slate-100:hover {
+  background-color: #16233b;
+}
+  .dark .hover\:bg-slate-50:hover {
+    background-color: var(--color-secondary-card);
+  }
+
+  /* Superficies translucidas y degradados del hero/dashboard */
+  .dark .bg-white\/80 {
+    background-color: rgba(17, 28, 48, 0.85);
+  }
+  .dark .bg-white\/70 {
+    background-color: rgba(17, 28, 48, 0.7);
+  }
+  .dark .divide-slate-100 > * + *,
+  .dark .divide-y > * + * {
+    border-color: var(--color-secondary-border);
+  }
+  .dark .from-white {
+    --tw-gradient-from: var(--color-secondary-card) in oklab;
+    --tw-gradient-to: var(--color-secondary-card) in oklab;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+  .dark .via-\[\#f8fcfb\],
+  .dark .via-\[\#f7fbfa\] {
+    --tw-gradient-to: var(--color-secondary-card) in oklab;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--color-secondary-card), var(--tw-gradient-to);
+  }
+  .dark .to-\[\#ecf7f3\],
+  .dark .to-\[\#eef8f5\] {
+    --tw-gradient-to: var(--color-bg-base) in oklab;
+  }
+
+  /* Buscador superior: en oscuro usa superficie de tarjeta y texto claro */
+  .dark .topbar-search {
+    background-color: var(--color-secondary-card);
+    border-color: var(--color-secondary-border);
+    color: var(--color-secondary-text);
+  }
+  .dark .topbar-search::placeholder {
+    color: var(--color-secondary-muted);
+  }
+  .dark .topbar-search:focus {
+    background-color: var(--color-secondary-card);
+    border-color: var(--color-primary);
+  }
+
+  /* Textos código duro que quedaban bajos de contraste en oscuro */
+  .dark .text-slate-300 {
+    color: #b3c2d8;
+  }
+  .dark .text-slate-200 {
+    color: #d3deee;
+  }
+  .dark .ring-white {
+    --tw-ring-color: var(--color-secondary-card);
+  }
+
+  /* Selects nativos: el desplegable de opciones debe ser legible en oscuro */
+  .dark select option {
+    background-color: var(--color-secondary-card);
+    color: var(--color-secondary-text);
+  }
+  .dark select {
+    color-scheme: dark;
+  }
+  .dark input,
+  .dark textarea,
+  .dark select {
+    color-scheme: dark;
+  }
+
+  /* Inputs y selects (.inp) en modo oscuro: evita fondo blanco y texto gris ilegible */
+  .dark .inp {
+    background-color: var(--color-secondary-card);
+    border-color: var(--color-secondary-border);
+    color: var(--color-secondary-text);
+  }
+  .dark .inp::placeholder {
+    color: var(--color-secondary-subtle);
+  }
+  .dark .inp:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(79, 155, 255, 0.15);
+  }
+  .dark .inp:disabled {
+    background-color: #16233b;
+    color: var(--color-secondary-subtle);
+  }
+  .dark select.inp {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2393a4bd' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 1rem;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 2.2rem;
+  }
+  .dark .lbl {
+    color: var(--color-secondary-muted);
+  }
+
+  /* Modo compacto: reduce espaciado en listados y paneles */
+  .compact-mode .card {
+    @apply p-4;
+  }
+  .compact-mode .space-y-3 > * + * {
+    margin-top: 0.5rem;
+  }
+  .compact-mode .space-y-6 > * + * {
+    margin-top: 0.75rem;
+  }
+  .compact-mode .rounded-2xl {
+    @apply rounded-xl;
+  }
+  .compact-mode .gap-6 {
+    @apply gap-3;
+  }
+  .compact-mode .p-6 {
+    @apply p-4;
+  }
+  .compact-mode .py-\[18px\],
+  .compact-mode .py-5 {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+  .compact-mode .text-\[15px\] {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
