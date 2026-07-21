@@ -1,6 +1,4 @@
 <div align="center">
-
-<img width="300" height="33" alt="footer" src="https://github.com/user-attachments/assets/da165143-e21a-43aa-bbfe-2ef78b77146a" />
 <svg viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -137,8 +135,5 @@ Emotiva convierte la administración clínica en un proceso más sencillo, visua
   <text x="1140" y="55" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#F4F6FB" letter-spacing="0.5">Emotiva</text>
   <text x="1140" y="80" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#B9C4E4" letter-spacing="0.4">Software propietario · uso exclusivo del cliente</text>
 </svg>
-
-
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1E293B,100:5B8FD4&height=150&section=footer" width="100%"/>
 
 </div>
