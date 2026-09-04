@@ -1,0 +1,11 @@
+{
+  "name": "AuraMind Clinical",
+  "description": "Plataforma clínica avanzada de inteligencia artificial y neuropsicología para profesionales de la salud mental",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
